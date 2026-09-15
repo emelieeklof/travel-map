@@ -11,13 +11,17 @@ import { CollectionMapView } from './components/CollectionMapView'
 import { AddSpotScreen } from './components/AddSpotScreen'
 import { Logo } from './components/Logo'
 import { SignIn } from './components/SignIn'
+import { SplashScreen } from './components/SplashScreen'
 import { actions, hydrate, markSignedOut, useAppState } from './store'
 import { supabase, supabaseConfigured } from './lib/supabase'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
+const MIN_SPLASH_MS = 2000
+
 function App() {
   const authStatus = useAppState((s) => s.authStatus)
+  const [minSplashElapsed, setMinSplashElapsed] = useState(false)
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -35,12 +39,19 @@ function App() {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  // Show the splash screen for at least MIN_SPLASH_MS, even if auth resolves faster —
+  // otherwise it can flash by too quickly to register as an intentional splash.
+  useEffect(() => {
+    const timer = setTimeout(() => setMinSplashElapsed(true), MIN_SPLASH_MS)
+    return () => clearTimeout(timer)
+  }, [])
+
   if (!API_KEY) {
     return <MissingApiKeyScreen />
   }
 
-  if (authStatus === 'loading') {
-    return <div className="flex h-full w-full items-center justify-center bg-surface" />
+  if (authStatus === 'loading' || !minSplashElapsed) {
+    return <SplashScreen />
   }
 
   if (authStatus === 'signedOut') {
