@@ -32,26 +32,29 @@ afterEach(() => {
 })
 
 describe('App — auth gate', () => {
-  it('shows the splash screen while authStatus is "loading"', () => {
+  it('shows only the splash screen while authStatus is "loading"', () => {
     state.authStatus = 'loading'
     render(<App />)
-    expect(screen.getByText('SPOTTED')).toBeInTheDocument()
-    expect(screen.queryByText('Continue with Google')).not.toBeInTheDocument()
+    expect(screen.getByTestId('app-splash')).toBeInTheDocument()
+    expect(screen.queryByTestId('app-content')).not.toBeInTheDocument()
   })
 
-  it('keeps showing the splash screen for a minimum time, even once signed out resolves', () => {
+  it('keeps the splash screen fully opaque for a minimum time, even once signed out resolves', () => {
     state.authStatus = 'signedOut'
     render(<App />)
-    expect(screen.getByText('SPOTTED')).toBeInTheDocument()
-    expect(screen.queryByText('Continue with Google')).not.toBeInTheDocument()
+    // The sign-in screen mounts underneath right away (so it's ready to cross-fade in),
+    // but the splash layer must stay fully opaque until the minimum time elapses.
+    expect(screen.getByTestId('app-splash')).not.toHaveClass('opacity-0')
+    expect(screen.getByTestId('app-content')).toHaveClass('opacity-0')
   })
 
-  it('shows the sign-in screen once authStatus is "signedOut" and the minimum splash time has passed', () => {
+  it('cross-fades to the sign-in screen once the minimum splash time has passed', () => {
     state.authStatus = 'signedOut'
     render(<App />)
     act(() => {
       vi.advanceTimersByTime(2000)
     })
+    expect(screen.getByTestId('app-content')).not.toHaveClass('opacity-0')
     expect(screen.getByText('Continue with Google')).toBeInTheDocument()
   })
 })

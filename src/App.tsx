@@ -18,10 +18,13 @@ import { supabase, supabaseConfigured } from './lib/supabase'
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 const MIN_SPLASH_MS = 2000
+// Must match the Tailwind duration classes used below (duration-500).
+const FADE_MS = 500
 
 function App() {
   const authStatus = useAppState((s) => s.authStatus)
   const [minSplashElapsed, setMinSplashElapsed] = useState(false)
+  const [splashRemoved, setSplashRemoved] = useState(false)
 
   useEffect(() => {
     if (!supabaseConfigured) {
@@ -46,22 +49,48 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
+  const authResolved = authStatus !== 'loading'
+  const ready = authResolved && minSplashElapsed
+
+  // Once ready, let the cross-fade play before actually unmounting the splash.
+  useEffect(() => {
+    if (!ready) return
+    const timer = setTimeout(() => setSplashRemoved(true), FADE_MS)
+    return () => clearTimeout(timer)
+  }, [ready])
+
   if (!API_KEY) {
     return <MissingApiKeyScreen />
   }
 
-  if (authStatus === 'loading' || !minSplashElapsed) {
-    return <SplashScreen />
-  }
-
-  if (authStatus === 'signedOut') {
-    return <SignIn />
-  }
-
+  // The real content mounts as soon as auth resolves (so e.g. the map/APIProvider can
+  // start warming up behind the splash) but stays invisible until `ready` — then both
+  // layers cross-fade together instead of an instant cut.
   return (
-    <APIProvider apiKey={API_KEY} libraries={['places', 'marker']}>
-      <Shell />
-    </APIProvider>
+    <div className="relative h-full w-full overflow-hidden">
+      {authResolved && (
+        <div
+          data-testid="app-content"
+          className={`h-full w-full transition-opacity duration-500 ease-out ${ready ? 'opacity-100' : 'opacity-0'}`}
+        >
+          {authStatus === 'signedOut' ? (
+            <SignIn />
+          ) : (
+            <APIProvider apiKey={API_KEY} libraries={['places', 'marker']}>
+              <Shell />
+            </APIProvider>
+          )}
+        </div>
+      )}
+      {!splashRemoved && (
+        <div
+          data-testid="app-splash"
+          className={`absolute inset-0 transition-opacity duration-500 ease-out ${ready ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        >
+          <SplashScreen />
+        </div>
+      )}
+    </div>
   )
 }
 
