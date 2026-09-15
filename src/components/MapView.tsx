@@ -29,6 +29,7 @@ import { CATEGORY_BY_ID, type CategoryId } from '../categories'
 import { CategoryMarker } from './CategoryMarker'
 import { LegacyCategoryMarker } from './LegacyCategoryMarker'
 import type { PickedPlace } from './PlaceSearch'
+import { resolveDefaultViewport, type Viewport } from './mapViewport'
 
 type RouteEndpoint = { lat: number; lng: number; name: string }
 
@@ -108,10 +109,13 @@ export function MapView({ onAddPoi, standalone }: Props) {
   // which would otherwise snap back to the collection's stored center/zoom and
   // discard whatever pan/zoom the user was actually looking at. Track the live
   // viewport continuously so a remount can restore it instead.
-  const lastViewportRef = useRef<{ center: { lat: number; lng: number }; zoom: number } | null>(null)
+  const lastViewportRef = useRef<Viewport | null>(null)
 
-  const defaultCenter = lastViewportRef.current?.center ?? activeCollection?.center ?? { lat: 38.7223, lng: -9.1393 }
-  const defaultZoom = lastViewportRef.current?.zoom ?? activeCollection?.zoom ?? 13
+  const { center: defaultCenter, zoom: defaultZoom } = resolveDefaultViewport(
+    lastViewportRef.current,
+    activeCollection,
+    { center: { lat: 38.7223, lng: -9.1393 }, zoom: 13 },
+  )
 
   const [poiPreview, setPoiPreview] = useState<PoiPreview | null>(null)
   const [poiLoading, setPoiLoading] = useState(false)
@@ -737,7 +741,7 @@ function PoiPreviewWindow({
 function TrackViewport({
   viewportRef,
 }: {
-  viewportRef: RefObject<{ center: { lat: number; lng: number }; zoom: number } | null>
+  viewportRef: RefObject<Viewport | null>
 }) {
   const map = useMap()
   useEffect(() => {
