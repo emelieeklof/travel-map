@@ -61,9 +61,12 @@ type Props = {
   /** When true, suppresses the "No collection selected" overlay — used by the
    * full-screen Add-spot flow, where you aren't required to have one active. */
   standalone?: boolean
+  /** Overrides the usual "last viewport / active collection / Lisbon" default —
+   * used by the Add-spot flow to open centered on your current location. */
+  initialViewport?: Viewport | null
 }
 
-export function MapView({ onAddPoi, standalone }: Props) {
+export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
   const activeCollection = useAppState((s) =>
     s.collections.find((c) => c.id === s.activeCollectionId) ?? null,
   )
@@ -112,7 +115,7 @@ export function MapView({ onAddPoi, standalone }: Props) {
   const lastViewportRef = useRef<Viewport | null>(null)
 
   const { center: defaultCenter, zoom: defaultZoom } = resolveDefaultViewport(
-    lastViewportRef.current,
+    lastViewportRef.current ?? initialViewport ?? null,
     activeCollection,
     { center: { lat: 38.7223, lng: -9.1393 }, zoom: 13 },
   )
