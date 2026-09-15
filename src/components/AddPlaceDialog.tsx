@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { X, Check } from 'lucide-react'
 import { CATEGORIES, type CategoryId } from '../categories'
 import type { PickedPlace } from './PlaceSearch'
@@ -23,7 +23,11 @@ type Props = {
 
 export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
   const userId = useAppState((s) => s.userId)
-  const myCollections = useAppState((s) => s.collections.filter((c) => c.creatorId === userId))
+  const allCollections = useAppState((s) => s.collections)
+  const myCollections = useMemo(
+    () => allCollections.filter((c) => c.creatorId === userId),
+    [allCollections, userId],
+  )
 
   const [name, setName] = useState('')
   const [category, setCategory] = useState<CategoryId>('eating')
