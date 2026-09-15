@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   Map,
   InfoWindow,
@@ -44,15 +44,27 @@ type PoiPreview = {
   rating?: number
   userRatingCount?: number
   types?: string[]
+  instagramUrl?: string
+}
+
+/** Google's "website" field is sometimes literally an Instagram link (common for small
+ * businesses without a real site) — only use it when it actually is one, so we never
+ * mislabel a real website as Instagram. */
+function instagramUrlFromWebsite(websiteUri?: string | null): string | undefined {
+  if (!websiteUri) return undefined
+  return /instagram\.com|instagr\.am/i.test(websiteUri) ? websiteUri : undefined
 }
 
 type Props = {
   onAddPoi: (picked: PickedPlace) => void
+  /** When true, suppresses the "No collection selected" overlay — used by the
+   * full-screen Add-spot flow, where you aren't required to have one active. */
+  standalone?: boolean
 }
 
-export function MapView({ onAddPoi }: Props) {
-  const activeList = useAppState((s) =>
-    s.lists.find((l) => l.id === s.activeListId) ?? null,
+export function MapView({ onAddPoi, standalone }: Props) {
+  const activeCollection = useAppState((s) =>
+    s.collections.find((c) => c.id === s.activeCollectionId) ?? null,
   )
   const places = useAppState((s) => s.places)
   const hidden = useAppState((s) => s.hiddenCategories)
@@ -86,14 +98,20 @@ export function MapView({ onAddPoi }: Props) {
   const walkingRoute = useWalkingRoute(activeRoute?.from ?? null, activeRoute?.to ?? null)
 
   const visiblePlaces = useMemo(() => {
-    if (!activeList) return []
+    if (!activeCollection) return []
     return places.filter(
-      (p) => p.listId === activeList.id && !hidden.includes(p.category),
+      (p) => p.collectionId === activeCollection.id && !hidden.includes(p.category),
     )
-  }, [places, hidden, activeList])
+  }, [places, hidden, activeCollection])
 
-  const defaultCenter = activeList?.center ?? { lat: 38.7223, lng: -9.1393 }
-  const defaultZoom = activeList?.zoom ?? 13
+  // Toggling focus mode remounts the map (mapId is immutable on a live instance),
+  // which would otherwise snap back to the collection's stored center/zoom and
+  // discard whatever pan/zoom the user was actually looking at. Track the live
+  // viewport continuously so a remount can restore it instead.
+  const lastViewportRef = useRef<{ center: { lat: number; lng: number }; zoom: number } | null>(null)
+
+  const defaultCenter = lastViewportRef.current?.center ?? activeCollection?.center ?? { lat: 38.7223, lng: -9.1393 }
+  const defaultZoom = lastViewportRef.current?.zoom ?? activeCollection?.zoom ?? 13
 
   const [poiPreview, setPoiPreview] = useState<PoiPreview | null>(null)
   const [poiLoading, setPoiLoading] = useState(false)
@@ -114,6 +132,7 @@ export function MapView({ onAddPoi }: Props) {
             'rating',
             'userRatingCount',
             'types',
+            'websiteURI',
           ],
         })
         const loc = place.location
@@ -130,6 +149,7 @@ export function MapView({ onAddPoi }: Props) {
           rating: place.rating ?? undefined,
           userRatingCount: place.userRatingCount ?? undefined,
           types: place.types ?? undefined,
+          instagramUrl: instagramUrlFromWebsite(place.websiteURI),
         })
       } catch (err) {
         console.error('Failed to fetch POI details', err)
@@ -203,7 +223,7 @@ export function MapView({ onAddPoi }: Props) {
           <PoiPreviewWindow
             poi={poiPreview}
             loading={poiLoading}
-            activeListName={activeList?.name ?? null}
+            activeCollectionName={activeCollection?.name ?? null}
             onClose={() => setPoiPreview(null)}
             onAdd={() => {
               onAddPoi({
@@ -212,20 +232,23 @@ export function MapView({ onAddPoi }: Props) {
                 lng: poiPreview.lng,
                 address: poiPreview.address,
                 placeId: poiPreview.placeId,
+                photoUrl: poiPreview.photoUrl,
+                instagramUrl: poiPreview.instagramUrl,
                 preferredCategory: guessCategoryFromTypes(poiPreview.types),
               })
               setPoiPreview(null)
             }}
           />
         )}
-        <FlyToActiveList />
+        <TrackViewport viewportRef={lastViewportRef} />
+        <FlyToActiveCollection />
         <FlyToSelectedPlace />
         {userLocation && <UserLocationMarker location={userLocation} focusMode={focusMode} />}
         {activeRoute && walkingRoute.path && (
           <>
             <Polyline
               path={walkingRoute.path}
-              strokeColor="#4f46e5"
+              strokeColor="#a13920"
               strokeWeight={5}
               strokeOpacity={0.85}
             />
@@ -237,11 +260,11 @@ export function MapView({ onAddPoi }: Props) {
           </>
         )}
       </Map>
-      {!activeList && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/40 backdrop-blur-sm">
-          <div className="pointer-events-auto rounded-2xl bg-white px-6 py-5 text-center shadow-lg ring-1 ring-zinc-200">
-            <p className="text-sm font-medium text-zinc-900">No list selected</p>
-            <p className="mt-1 text-xs text-zinc-500">Create a list from the sidebar to start saving places.</p>
+      {!activeCollection && !standalone && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-surface/40 backdrop-blur-sm">
+          <div className="pointer-events-auto rounded-2xl bg-surface-container-lowest px-6 py-5 text-center shadow-float">
+            <p className="text-sm font-medium text-on-surface">No collection selected</p>
+            <p className="mt-1 text-xs text-on-surface-variant">Open a collection to see it on the map.</p>
           </div>
         </div>
       )}
@@ -369,9 +392,9 @@ function WalkingRoutePanel({
   // wrapper as the focus-mode toggle.)
   return (
     <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 w-[min(420px,calc(100%-2rem))] -translate-x-1/2">
-      <div className="pointer-events-auto rounded-2xl border border-zinc-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-2 border-b border-zinc-100 px-4 py-2.5">
-          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-600">
+      <div className="pointer-events-auto rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-float">
+        <div className="flex items-start justify-between gap-2 border-b border-outline-variant px-4 py-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary">
             <Footprints className="h-3.5 w-3.5" />
             Walking route
           </div>
@@ -381,39 +404,39 @@ function WalkingRoutePanel({
               actions.setDirectionsFromMeTo(null)
             }}
             aria-label="Close"
-            className="-mr-1 -mt-0.5 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="-mr-1 -mt-0.5 rounded p-1 text-outline hover:bg-surface-container hover:text-on-surface"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
         <div className="px-4 py-3">
-          <div className="text-xs text-zinc-500">From</div>
-          <div className="truncate text-sm font-medium text-zinc-900">{from.name}</div>
-          <div className="mt-2 text-xs text-zinc-500">To</div>
-          <div className="truncate text-sm font-medium text-zinc-900">{to.name}</div>
-          <div className="mt-3 flex items-center gap-4 border-t border-zinc-100 pt-3">
+          <div className="text-xs text-outline">From</div>
+          <div className="truncate text-sm font-medium text-on-surface">{from.name}</div>
+          <div className="mt-2 text-xs text-outline">To</div>
+          <div className="truncate text-sm font-medium text-on-surface">{to.name}</div>
+          <div className="mt-3 flex items-center gap-4 border-t border-outline-variant pt-3">
             {loading && (
-              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <div className="flex items-center gap-1.5 text-xs text-outline">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Calculating…
               </div>
             )}
-            {error && <div className="text-xs text-red-600">{error}</div>}
+            {error && <div className="text-xs text-error">{error}</div>}
             {!loading && !error && durationText && (
               <>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-400">Time</div>
-                  <div className="text-base font-semibold text-zinc-900">{durationText}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-outline">Time</div>
+                  <div className="text-base font-semibold text-on-surface">{durationText}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wider text-zinc-400">Distance</div>
-                  <div className="text-base font-semibold text-zinc-900">{distanceText}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-outline">Distance</div>
+                  <div className="text-base font-semibold text-on-surface">{distanceText}</div>
                 </div>
                 <a
                   href={directionsUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800"
+                  className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-container"
                 >
                   Open in Maps
                   <ExternalLink className="h-3 w-3" />
@@ -441,8 +464,8 @@ function FocusModeToggle({ focusMode }: { focusMode: boolean }) {
         className={
           'pointer-events-auto inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium shadow-sm transition-colors ' +
           (focusMode
-            ? 'border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800'
-            : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50')
+            ? 'border-primary bg-primary text-on-primary hover:bg-primary-container'
+            : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container')
         }
       >
         {focusMode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -476,21 +499,21 @@ function SelectedPlaceInfoWindow() {
             >
               {category.label}
             </div>
-            <h3 className="mt-1.5 text-sm font-semibold text-zinc-900">{place.name}</h3>
+            <h3 className="mt-1.5 text-sm font-semibold text-on-surface">{place.name}</h3>
             {place.address && (
-              <p className="mt-0.5 text-xs text-zinc-500">{place.address}</p>
+              <p className="mt-0.5 text-xs text-on-surface-variant">{place.address}</p>
             )}
           </div>
           <button
             onClick={() => actions.selectPlace(null)}
-            className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="rounded-md p-1 text-outline hover:bg-surface-container hover:text-on-surface"
             aria-label="Close"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
         {place.notes && (
-          <p className="mt-2 text-xs leading-relaxed text-zinc-700">{place.notes}</p>
+          <p className="mt-2 text-xs leading-relaxed text-on-surface-variant">{place.notes}</p>
         )}
         <div className="mt-3 flex items-center justify-between gap-2">
           <button
@@ -505,7 +528,7 @@ function SelectedPlaceInfoWindow() {
               }
             }}
             disabled={locationStatus === 'denied' || locationStatus === 'unavailable'}
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2 py-1 text-xs font-medium text-on-primary hover:bg-primary-container disabled:cursor-not-allowed disabled:bg-surface-container-high"
             title={
               locationStatus === 'denied'
                 ? 'Location permission denied — re-allow in browser settings.'
@@ -521,7 +544,7 @@ function SelectedPlaceInfoWindow() {
                 actions.deletePlace(place.id)
               }
             }}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-zinc-500 hover:bg-red-50 hover:text-red-600"
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-on-surface-variant hover:bg-error-container/40 hover:text-error"
           >
             <Trash2 className="h-3 w-3" />
             Remove
@@ -584,10 +607,10 @@ function LocationControl() {
         className={
           'pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border shadow-md transition-colors ' +
           (denied
-            ? 'cursor-not-allowed border-zinc-200 bg-white text-zinc-300'
+            ? 'cursor-not-allowed border-outline-variant bg-surface-container-lowest text-outline'
             : active
-              ? 'border-transparent bg-indigo-600 text-white hover:bg-indigo-700'
-              : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50')
+              ? 'border-transparent bg-primary text-on-primary hover:bg-primary-container'
+              : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container')
         }
       >
         {status === 'requesting' && !location ? (
@@ -623,8 +646,8 @@ function UserLocationMarker({
   return (
     <AdvancedMarker position={position} zIndex={2000}>
       <div className="relative">
-        <span className="absolute inset-0 -m-1 animate-ping rounded-full bg-indigo-400/40" />
-        <span className="block h-3.5 w-3.5 rounded-full border-2 border-white bg-indigo-600 shadow-md" />
+        <span className="absolute inset-0 -m-1 animate-ping rounded-full bg-primary/40" />
+        <span className="block h-3.5 w-3.5 rounded-full border-2 border-white bg-primary shadow-md" />
       </div>
     </AdvancedMarker>
   )
@@ -634,7 +657,7 @@ function legacyUserLocationIcon(): google.maps.Symbol {
   return {
     path: google.maps.SymbolPath.CIRCLE,
     scale: 8,
-    fillColor: '#4f46e5',
+    fillColor: '#a13920',
     fillOpacity: 1,
     strokeColor: '#ffffff',
     strokeWeight: 2.5,
@@ -644,13 +667,13 @@ function legacyUserLocationIcon(): google.maps.Symbol {
 function PoiPreviewWindow({
   poi,
   loading,
-  activeListName,
+  activeCollectionName,
   onClose,
   onAdd,
 }: {
   poi: PoiPreview
   loading: boolean
-  activeListName: string | null
+  activeCollectionName: string | null
   onClose: () => void
   onAdd: () => void
 }) {
@@ -663,45 +686,45 @@ function PoiPreviewWindow({
     >
       <div className="w-[280px] p-1 font-sans">
         {loading && !poi.photoUrl && (
-          <div className="flex h-10 items-center justify-center text-xs text-zinc-400">
+          <div className="flex h-10 items-center justify-center text-xs text-outline">
             <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
             Loading details…
           </div>
         )}
         {poi.photoUrl && (
-          <div className="-mx-1 -mt-1 mb-2 aspect-[16/9] overflow-hidden rounded-t-md bg-zinc-100">
-            <img src={poi.photoUrl} alt={poi.name} className="h-full w-full object-cover" />
+          <div className="-mx-1 -mt-1 mb-2 aspect-[16/9] overflow-hidden rounded-t-md bg-surface-container-high">
+            <img src={poi.photoUrl} alt={poi.name} className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
           </div>
         )}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-snug text-zinc-900">{poi.name}</h3>
+          <h3 className="text-sm font-semibold leading-snug text-on-surface">{poi.name}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="rounded p-0.5 text-outline hover:bg-surface-container hover:text-on-surface"
           >
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
         {poi.rating !== undefined && (
-          <div className="mt-1 flex items-center gap-1 text-xs text-zinc-600">
+          <div className="mt-1 flex items-center gap-1 text-xs text-on-surface-variant">
             <Star className="h-3 w-3 fill-amber-400 stroke-amber-400" />
             <span className="font-medium">{poi.rating.toFixed(1)}</span>
             {poi.userRatingCount !== undefined && (
-              <span className="text-zinc-400">({poi.userRatingCount.toLocaleString()})</span>
+              <span className="text-outline">({poi.userRatingCount.toLocaleString()})</span>
             )}
           </div>
         )}
         {poi.address && (
-          <p className="mt-1.5 text-xs leading-tight text-zinc-500">{poi.address}</p>
+          <p className="mt-1.5 text-xs leading-tight text-on-surface-variant">{poi.address}</p>
         )}
         <button
           onClick={onAdd}
-          disabled={!activeListName}
-          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={!activeCollectionName}
+          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-on-primary hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-3 w-3" />
-          {activeListName ? `Add to ${activeListName}` : 'No list selected'}
+          {activeCollectionName ? `Add to ${activeCollectionName}` : 'No collection selected'}
         </button>
       </div>
     </InfoWindow>
@@ -709,33 +732,60 @@ function PoiPreviewWindow({
 }
 
 /** When the active list changes, fly the map to its default center/zoom (or to fit its places). */
-function FlyToActiveList() {
+/** Continuously records the map's live center/zoom so a focus-mode-triggered
+ * remount can restore it instead of snapping back to a stale default. */
+function TrackViewport({
+  viewportRef,
+}: {
+  viewportRef: RefObject<{ center: { lat: number; lng: number }; zoom: number } | null>
+}) {
   const map = useMap()
-  const activeList = useAppState((s) =>
-    s.lists.find((l) => l.id === s.activeListId) ?? null,
+  useEffect(() => {
+    if (!map) return
+    const listener = map.addListener('idle', () => {
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+      if (!center || zoom == null) return
+      viewportRef.current = { center: { lat: center.lat(), lng: center.lng() }, zoom }
+    })
+    return () => listener.remove()
+  }, [map, viewportRef])
+  return null
+}
+
+function FlyToActiveCollection() {
+  const map = useMap()
+  const activeCollection = useAppState((s) =>
+    s.collections.find((c) => c.id === s.activeCollectionId) ?? null,
   )
   const places = useAppState((s) => s.places)
+  // Toggling focus mode remounts the underlying map (mapId can't change on a live
+  // instance), which changes `map`'s identity without activeCollection.id actually
+  // changing — skip re-flying in that case so the user's current pan/zoom sticks.
+  const lastFlownCollectionIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    if (!map || !activeList) return
-    const listPlaces = places.filter((p) => p.listId === activeList.id)
-    if (listPlaces.length > 1) {
+    if (!map || !activeCollection) return
+    if (lastFlownCollectionIdRef.current === activeCollection.id) return
+    lastFlownCollectionIdRef.current = activeCollection.id
+    const collectionPlaces = places.filter((p) => p.collectionId === activeCollection.id)
+    if (collectionPlaces.length > 1) {
       const bounds = new google.maps.LatLngBounds()
-      listPlaces.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
+      collectionPlaces.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }))
       map.fitBounds(bounds, 80)
       return
     }
-    if (listPlaces.length === 1) {
-      map.panTo({ lat: listPlaces[0].lat, lng: listPlaces[0].lng })
+    if (collectionPlaces.length === 1) {
+      map.panTo({ lat: collectionPlaces[0].lat, lng: collectionPlaces[0].lng })
       map.setZoom(15)
       return
     }
-    if (activeList.center) {
-      map.panTo(activeList.center)
-      map.setZoom(activeList.zoom ?? 13)
+    if (activeCollection.center) {
+      map.panTo(activeCollection.center)
+      map.setZoom(activeCollection.zoom ?? 13)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, activeList?.id])
+  }, [map, activeCollection?.id])
   return null
 }
 

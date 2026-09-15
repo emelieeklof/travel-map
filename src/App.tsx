@@ -1,21 +1,50 @@
 import { useEffect, useState } from 'react'
 import { APIProvider } from '@vis.gl/react-google-maps'
-import { KeyRound, Menu } from 'lucide-react'
-import { Sidebar } from './components/Sidebar'
-import { MapView } from './components/MapView'
-import { PlaceSearch, type PickedPlace } from './components/PlaceSearch'
-import { AddPlaceDialog } from './components/AddPlaceDialog'
-import { actions, seedIfEmpty, useAppState } from './store'
+import { KeyRound } from 'lucide-react'
+import { BottomNav } from './components/BottomNav'
+import { FollowingFeed } from './components/FollowingFeed'
+import { Explore } from './components/Explore'
+import { Guides } from './components/Guides'
+import { Profile } from './components/Profile'
+import { SpotDetail } from './components/SpotDetail'
+import { CollectionMapView } from './components/CollectionMapView'
+import { AddSpotScreen } from './components/AddSpotScreen'
+import { Logo } from './components/Logo'
+import { SignIn } from './components/SignIn'
+import { actions, hydrate, markSignedOut, useAppState } from './store'
+import { supabase, supabaseConfigured } from './lib/supabase'
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 
 function App() {
+  const authStatus = useAppState((s) => s.authStatus)
+
   useEffect(() => {
-    seedIfEmpty()
+    if (!supabaseConfigured) {
+      markSignedOut()
+      return
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) hydrate(data.session.user)
+      else markSignedOut()
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) hydrate(session.user)
+      else markSignedOut()
+    })
+    return () => sub.subscription.unsubscribe()
   }, [])
 
   if (!API_KEY) {
     return <MissingApiKeyScreen />
+  }
+
+  if (authStatus === 'loading') {
+    return <div className="flex h-full w-full items-center justify-center bg-surface" />
+  }
+
+  if (authStatus === 'signedOut') {
+    return <SignIn />
   }
 
   return (
@@ -26,58 +55,33 @@ function App() {
 }
 
 function Shell() {
-  const activeListId = useAppState((s) => s.activeListId)
-  const [picked, setPicked] = useState<PickedPlace | null>(null)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const tab = useAppState((s) => s.tab)
+  const detail = useAppState((s) => s.detail)
+  const [addSpotOpen, setAddSpotOpen] = useState(false)
   useGeolocationWatcher()
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      {sidebarOpen && (
-        <button
-          type="button"
-          onClick={() => setSidebarOpen(false)}
-          aria-label="Close menu"
-          className="fixed inset-0 z-20 bg-black/40 md:hidden"
-        />
-      )}
-      <main className="relative flex flex-1 flex-col">
-        <div className="absolute inset-x-0 top-0 z-10 flex items-start gap-2 px-3 pt-3 md:justify-center md:px-4 md:pt-4">
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white shadow-sm md:hidden"
-          >
-            <Menu className="h-5 w-5 text-zinc-700" />
-          </button>
-          <div className="w-full md:max-w-xl">
-            <PlaceSearch onPick={setPicked} disabled={!activeListId} />
-          </div>
-        </div>
-        <div className="flex-1">
-          <MapView onAddPoi={setPicked} />
-        </div>
-      </main>
-      <AddPlaceDialog
-        picked={picked}
-        onCancel={() => setPicked(null)}
-        onSave={(input) => {
-          if (!activeListId) return
-          actions.addPlace({
-            listId: activeListId,
-            name: input.name,
-            category: input.category,
-            lat: input.lat,
-            lng: input.lng,
-            address: input.address,
-            placeId: input.placeId,
-            notes: input.notes,
-          })
-          setPicked(null)
-        }}
-      />
+    <div className="relative mx-auto flex h-full w-full max-w-[480px] flex-col overflow-hidden bg-surface md:my-0 md:h-screen md:shadow-float">
+      <div className="relative flex-1 overflow-hidden">
+        {addSpotOpen ? (
+          <AddSpotScreen onClose={() => setAddSpotOpen(false)} />
+        ) : detail?.type === 'spot' ? (
+          <SpotDetail placeId={detail.id} />
+        ) : detail?.type === 'creator' ? (
+          <Profile creatorId={detail.id} />
+        ) : detail?.type === 'collection' ? (
+          <CollectionMapView collectionId={detail.id} />
+        ) : tab === 'home' ? (
+          <FollowingFeed />
+        ) : tab === 'explore' ? (
+          <Explore />
+        ) : tab === 'guides' ? (
+          <Guides />
+        ) : (
+          <Profile />
+        )}
+      </div>
+      {!addSpotOpen && <BottomNav onAdd={() => setAddSpotOpen(true)} />}
     </div>
   )
 }
@@ -122,20 +126,23 @@ function useGeolocationWatcher() {
 
 function MissingApiKeyScreen() {
   return (
-    <div className="flex h-full items-center justify-center p-6">
-      <div className="max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 text-amber-700">
-          <KeyRound className="h-5 w-5" />
+    <div className="flex h-full items-center justify-center p-6 bg-surface">
+      <div className="max-w-md rounded-md border border-outline-variant bg-surface-container-lowest p-6 shadow-card">
+        <div className="flex items-center gap-2">
+          <Logo size={28} />
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-container/20 text-primary">
+            <KeyRound className="h-5 w-5" />
+          </div>
         </div>
-        <h1 className="mt-3 text-lg font-semibold text-zinc-900">Add your Google Maps API key</h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Atlas needs a Google Maps API key to render the map and power Places search.
+        <h1 className="mt-3 text-lg font-semibold text-on-surface">Add your Google Maps API key</h1>
+        <p className="mt-2 text-sm text-on-surface-variant">
+          SPOTTED needs a Google Maps API key to render the map and power Places search.
         </p>
-        <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-zinc-700">
+        <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-on-surface-variant">
           <li>
             Create a key in the{' '}
             <a
-              className="text-indigo-600 underline"
+              className="text-primary underline"
               href="https://console.cloud.google.com/google/maps-apis/credentials"
               target="_blank"
               rel="noreferrer"
@@ -149,8 +156,8 @@ function MissingApiKeyScreen() {
             project.
           </li>
           <li>
-            Paste it into <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">.env.local</code>{' '}
-            as <code className="rounded bg-zinc-100 px-1 py-0.5 text-xs">VITE_GOOGLE_MAPS_API_KEY</code>.
+            Paste it into <code className="rounded bg-surface-container px-1 py-0.5 text-xs">.env.local</code>{' '}
+            as <code className="rounded bg-surface-container px-1 py-0.5 text-xs">VITE_GOOGLE_MAPS_API_KEY</code>.
           </li>
           <li>Restart the dev server.</li>
         </ol>

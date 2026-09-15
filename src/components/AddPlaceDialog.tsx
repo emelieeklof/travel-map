@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { X } from 'lucide-react'
+import { X, Check } from 'lucide-react'
 import { CATEGORIES, type CategoryId } from '../categories'
 import type { PickedPlace } from './PlaceSearch'
+import { actions, useAppState } from '../store'
 
 type Props = {
   picked: PickedPlace | null
@@ -14,20 +15,35 @@ type Props = {
     lng: number
     address?: string
     placeId?: string
+    photoUrl?: string
+    instagramUrl?: string
+    collectionId: string
   }) => void
 }
 
 export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
+  const userId = useAppState((s) => s.userId)
+  const myCollections = useAppState((s) => s.collections.filter((c) => c.creatorId === userId))
+
   const [name, setName] = useState('')
   const [category, setCategory] = useState<CategoryId>('eating')
   const [notes, setNotes] = useState('')
+  const [instagramUrl, setInstagramUrl] = useState('')
+  const [collectionId, setCollectionId] = useState<string | null>(null)
+  const [newCollectionName, setNewCollectionName] = useState('')
+  const [creatingNew, setCreatingNew] = useState(false)
 
   useEffect(() => {
     if (picked) {
       setName(picked.name)
       setNotes('')
+      setInstagramUrl(picked.instagramUrl ?? '')
       setCategory(picked.preferredCategory ?? guessCategory(picked.name))
+      setCollectionId(myCollections[0]?.id ?? null)
+      setCreatingNew(myCollections.length === 0)
+      setNewCollectionName('')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked])
 
   useEffect(() => {
@@ -40,8 +56,13 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
 
   if (!picked) return null
 
+  const canSubmit = name.trim() && (creatingNew ? newCollectionName.trim() : collectionId)
+
   const submit = () => {
-    if (!name.trim()) return
+    if (!canSubmit) return
+    const finalCollectionId = creatingNew
+      ? actions.createCollection({ name: newCollectionName.trim() })
+      : collectionId!
     onSave({
       name: name.trim(),
       category,
@@ -50,20 +71,23 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
       lng: picked.lng,
       address: picked.address,
       placeId: picked.placeId,
+      photoUrl: picked.photoUrl,
+      instagramUrl: instagramUrl.trim() || undefined,
+      collectionId: finalCollectionId,
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/30 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-on-surface/30 px-4 backdrop-blur-sm">
+      <div className="w-full max-w-md max-h-[90%] overflow-y-auto rounded-md bg-surface-container-lowest shadow-float">
         <div className="flex items-start justify-between px-5 pt-5">
           <div>
-            <h2 className="text-base font-semibold text-zinc-900">Save place</h2>
-            <p className="mt-0.5 text-xs text-zinc-500">Add it to your current list and tag a category.</p>
+            <h2 className="font-serif-display text-base font-semibold text-on-surface">Save spot</h2>
+            <p className="mt-0.5 text-xs text-on-surface-variant">Tag a category and choose where to save it.</p>
           </div>
           <button
             onClick={onCancel}
-            className="rounded-md p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600"
+            className="rounded-md p-1 text-outline hover:bg-surface-container hover:text-on-surface"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -79,12 +103,12 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') submit()
               }}
-              className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </Field>
 
           {picked.address && (
-            <div className="-mt-2 text-xs text-zinc-500">{picked.address}</div>
+            <div className="-mt-2 text-xs text-on-surface-variant">{picked.address}</div>
           )}
 
           <Field label="Category">
@@ -101,7 +125,7 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
                       'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ' +
                       (active
                         ? 'border-transparent text-white shadow-sm'
-                        : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300')
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-outline')
                     }
                     style={active ? { backgroundColor: c.color } : undefined}
                   >
@@ -113,30 +137,90 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
             </div>
           </Field>
 
+          <Field label="Collection">
+            <div className="space-y-1.5">
+              {myCollections.map((c) => {
+                const active = !creatingNew && collectionId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCreatingNew(false)
+                      setCollectionId(c.id)
+                    }}
+                    className={
+                      'flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-sm ' +
+                      (active
+                        ? 'border-primary bg-primary-container/10 text-on-surface'
+                        : 'border-outline-variant text-on-surface-variant')
+                    }
+                  >
+                    {c.name}
+                    {active && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                )
+              })}
+              <button
+                type="button"
+                onClick={() => setCreatingNew(true)}
+                className={
+                  'flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm ' +
+                  (creatingNew
+                    ? 'border-primary bg-primary-container/10 text-on-surface'
+                    : 'border-outline-variant text-on-surface-variant')
+                }
+              >
+                {creatingNew ? (
+                  <input
+                    autoFocus
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="New collection name…"
+                    className="w-full bg-transparent text-sm outline-none placeholder:text-outline"
+                  />
+                ) : (
+                  '+ New collection…'
+                )}
+              </button>
+            </div>
+          </Field>
+
           <Field label="Notes" optional>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Why this place? Tips, opening hours, what to order…"
-              className="w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none placeholder:text-zinc-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              className="w-full resize-none rounded-lg border border-outline-variant px-3 py-2 text-sm outline-none placeholder:text-outline focus:border-primary focus:ring-2 focus:ring-primary/15"
+            />
+          </Field>
+
+          <Field label="Instagram" optional>
+            <input
+              type="url"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              placeholder="https://instagram.com/..."
+              className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm outline-none placeholder:text-outline focus:border-primary focus:ring-2 focus:ring-primary/15"
             />
           </Field>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-zinc-100 px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-outline-variant px-5 py-3">
           <button
             onClick={onCancel}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-600 hover:bg-zinc-100"
+            className="rounded-full px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container"
           >
             Cancel
           </button>
           <button
             onClick={submit}
-            disabled={!name.trim()}
-            className="rounded-lg bg-zinc-900 px-3.5 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canSubmit}
+            className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Save place
+            Save spot
           </button>
         </div>
       </div>
@@ -155,9 +239,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <div className="mb-1.5 flex items-baseline gap-1.5 text-xs font-medium text-zinc-700">
+      <div className="mb-1.5 flex items-baseline gap-1.5 text-xs font-medium text-on-surface-variant">
         {label}
-        {optional && <span className="text-[10px] font-normal text-zinc-400">optional</span>}
+        {optional && <span className="text-[10px] font-normal text-outline">optional</span>}
       </div>
       {children}
     </label>

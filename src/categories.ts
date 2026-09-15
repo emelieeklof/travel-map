@@ -25,12 +25,12 @@ export type Category = {
 }
 
 export const CATEGORIES: readonly Category[] = [
-  { id: 'eating', label: 'Eating', color: '#ef4444', icon: Utensils },
-  { id: 'sightseeing', label: 'Sightseeing', color: '#8b5cf6', icon: Camera },
-  { id: 'shopping', label: 'Shopping', color: '#f59e0b', icon: ShoppingBag },
-  { id: 'bars', label: 'Bars', color: '#ec4899', icon: Wine },
-  { id: 'activities', label: 'Activities', color: '#10b981', icon: Mountain },
-  { id: 'other', label: 'Other', color: '#64748b', icon: MapPin },
+  { id: 'eating', label: 'Eating', color: '#a13920', icon: Utensils },
+  { id: 'sightseeing', label: 'Sightseeing', color: '#3e616f', icon: Camera },
+  { id: 'shopping', label: 'Shopping', color: '#466556', icon: ShoppingBag },
+  { id: 'bars', label: 'Bars', color: '#c25136', icon: Wine },
+  { id: 'activities', label: 'Activities', color: '#466556', icon: Mountain },
+  { id: 'other', label: 'Other', color: '#57423d', icon: MapPin },
 ]
 
 export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(

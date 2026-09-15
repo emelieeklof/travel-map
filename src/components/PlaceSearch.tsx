@@ -9,8 +9,18 @@ export type PickedPlace = {
   lng: number
   address?: string
   placeId?: string
+  photoUrl?: string
+  instagramUrl?: string
   /** If provided, AddPlaceDialog will preselect this category instead of guessing from the name. */
   preferredCategory?: CategoryId
+}
+
+/** Google's "website" field is sometimes literally an Instagram link (common for small
+ * businesses without a real site) — only use it when it actually is one, so we never
+ * mislabel a real website as Instagram. */
+function instagramUrlFromWebsite(website?: string | null): string | undefined {
+  if (!website) return undefined
+  return /instagram\.com|instagr\.am/i.test(website) ? website : undefined
 }
 
 type Props = {
@@ -31,7 +41,7 @@ export function PlaceSearch({ onPick, disabled }: Props) {
     // If you hit that wall, swap this for PlaceAutocompleteElement — see
     // README "Roadmap" section.
     const autocomplete = new placesLib.Autocomplete(inputRef.current, {
-      fields: ['name', 'geometry.location', 'formatted_address', 'place_id'],
+      fields: ['name', 'geometry.location', 'formatted_address', 'place_id', 'website'],
     })
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace()
@@ -43,6 +53,7 @@ export function PlaceSearch({ onPick, disabled }: Props) {
         lng: loc.lng(),
         address: place.formatted_address,
         placeId: place.place_id,
+        instagramUrl: instagramUrlFromWebsite(place.website),
       })
       if (inputRef.current) inputRef.current.value = ''
     })
@@ -55,9 +66,9 @@ export function PlaceSearch({ onPick, disabled }: Props) {
   return (
     <div className="relative">
       {ready ? (
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-outline" />
       ) : (
-        <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-zinc-400" />
+        <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-outline" />
       )}
       <input
         ref={inputRef}
@@ -65,12 +76,12 @@ export function PlaceSearch({ onPick, disabled }: Props) {
         disabled={disabled || !ready}
         placeholder={
           disabled
-            ? 'Create a list first to add places'
+            ? 'Create a collection first to add pins'
             : ready
               ? 'Search for a restaurant, museum, bar…'
               : 'Loading search…'
         }
-        className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-9 pr-4 text-sm shadow-sm outline-none placeholder:text-zinc-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400"
+        className="w-full rounded-full border border-outline-variant bg-surface-container-lowest py-2.5 pl-9 pr-4 text-sm shadow-card outline-none placeholder:text-outline focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-surface-container disabled:text-outline"
       />
     </div>
   )
