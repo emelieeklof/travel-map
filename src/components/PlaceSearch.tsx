@@ -41,7 +41,7 @@ export function PlaceSearch({ onPick, disabled }: Props) {
     // If you hit that wall, swap this for PlaceAutocompleteElement — see
     // README "Roadmap" section.
     const autocomplete = new placesLib.Autocomplete(inputRef.current, {
-      fields: ['name', 'geometry.location', 'formatted_address', 'place_id', 'website'],
+      fields: ['name', 'geometry.location', 'formatted_address', 'place_id', 'website', 'photos'],
     })
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace()
@@ -53,6 +53,7 @@ export function PlaceSearch({ onPick, disabled }: Props) {
         lng: loc.lng(),
         address: place.formatted_address,
         placeId: place.place_id,
+        photoUrl: place.photos?.[0]?.getUrl({ maxWidth: 640, maxHeight: 480 }),
         instagramUrl: instagramUrlFromWebsite(place.website),
       })
       if (inputRef.current) inputRef.current.value = ''
