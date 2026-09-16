@@ -1,5 +1,8 @@
 import {
   Utensils,
+  UtensilsCrossed,
+  Coffee,
+  Shirt,
   Camera,
   ShoppingBag,
   Wine,
@@ -17,6 +20,9 @@ export type CategoryId =
   | 'bars'
   | 'activities'
   | 'other'
+  | 'thrifting'
+  | 'restaurant'
+  | 'cafe'
 
 export type Category = {
   id: CategoryId
@@ -33,6 +39,9 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'bars', label: 'Bars', color: '#c25136', icon: Wine },
   { id: 'activities', label: 'Activities', color: '#466556', icon: Mountain },
   { id: 'other', label: 'Other', color: '#57423d', icon: MapPin },
+  { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: Shirt },
+  { id: 'restaurant', label: 'Restaurant', color: '#8e5c4c', icon: UtensilsCrossed },
+  { id: 'cafe', label: 'Cafe', color: '#b8863f', icon: Coffee },
 ]
 
 export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
@@ -82,4 +91,10 @@ export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
   activities: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>',
   other:
     '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+  thrifting:
+    '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>',
+  restaurant:
+    '<path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6L8 14"/><path d="m4 12.4 6.1 6.1"/><path d="M7 22 11 18"/><path d="m17 15 1.4 1.4"/><path d="m21 21-2.4-2.4"/>',
+  cafe:
+    '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>',
 }
