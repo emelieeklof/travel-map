@@ -7,6 +7,8 @@ import {
   MapPin,
   type LucideIcon,
 } from 'lucide-react'
+import type { CustomCategory } from './types'
+import { CUSTOM_CATEGORY_ICONS } from './customCategoryIcons'
 
 export type CategoryId =
   | 'eating'
@@ -42,6 +44,32 @@ export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
  * legacy <Marker> icons via data URIs in focus mode, where AdvancedMarker doesn't
  * render (focus mode drops the mapId so styles work, which means raster map).
  */
+/**
+ * Looks up a category by id across the built-in set and a user's custom
+ * categories, falling back to "Other" for an id that matches neither
+ * (e.g. stale data, or a category owned by someone else).
+ */
+export function categoryById(id: string, customCategories: readonly CustomCategory[]): Category {
+  const builtin = CATEGORY_BY_ID[id as CategoryId]
+  if (builtin) return builtin
+  const custom = customCategories.find((c) => c.id === id)
+  if (custom) {
+    return {
+      id: custom.id as CategoryId,
+      label: custom.label,
+      color: custom.color,
+      icon: CUSTOM_CATEGORY_ICONS[custom.icon] ?? CUSTOM_CATEGORY_ICONS.tag,
+    }
+  }
+  return CATEGORY_BY_ID.other
+}
+
+/** SVG path (24x24 viewBox) used for legacy/focus-mode raster markers — no per-icon
+ * path data exists for custom categories, so they fall back to the generic "Other" pin. */
+export function categorySvgPath(id: string): string {
+  return CATEGORY_SVG_PATHS[id as CategoryId] ?? CATEGORY_SVG_PATHS.other
+}
+
 export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
   eating:
     '<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',

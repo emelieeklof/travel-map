@@ -1,6 +1,6 @@
 import { Compass } from 'lucide-react'
 import { useAppState, actions } from '../store'
-import { CATEGORY_BY_ID } from '../categories'
+import { CATEGORY_BY_ID, type CategoryId } from '../categories'
 import { MOCK_FEED_ITEMS } from '../mockCreators'
 
 function relativeTime(ms: number): string {
@@ -65,7 +65,7 @@ export function FollowingFeed() {
           </div>
         )}
         {feedItems.map(({ place, collection, creator, addedAt }) => {
-          const cat = CATEGORY_BY_ID[place.category]
+          const cat = CATEGORY_BY_ID[place.category as CategoryId] ?? CATEGORY_BY_ID.other
           return (
             <button
               key={place.id}

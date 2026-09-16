@@ -4,7 +4,7 @@ import { useAppState, actions, signOut } from '../store'
 import { FollowButton } from './FollowButton'
 import { CollectionCard } from './CollectionCard'
 import { PinTile } from './PinTile'
-import { CATEGORIES } from '../categories'
+import { CATEGORIES, categoryById } from '../categories'
 
 export function Profile({ creatorId }: { creatorId?: string }) {
   const myUserId = useAppState((s) => s.userId)
@@ -13,6 +13,7 @@ export function Profile({ creatorId }: { creatorId?: string }) {
   const collections = useAppState((s) => s.collections)
   const places = useAppState((s) => s.places)
   const followedIds = useAppState((s) => s.followedCreatorIds)
+  const customCategories = useAppState((s) => s.customCategories)
   const [view, setView] = useState<'collections' | 'pins'>('collections')
 
   const creator = creators.find((c) => c.id === id)
@@ -58,7 +59,7 @@ export function Profile({ creatorId }: { creatorId?: string }) {
         <div className="flex items-center gap-6 mt-4">
           <Stat label="Followers" value={followerCount} />
           <Stat label="Following" value={followingCount} />
-          <Stat label="Collections" value={myCollections.length} />
+          <Stat label={isMe ? 'Cities' : 'Collections'} value={myCollections.length} />
         </div>
 
         {!isMe && (
@@ -69,7 +70,7 @@ export function Profile({ creatorId }: { creatorId?: string }) {
       </div>
 
       <div className="flex border-b border-outline-variant/50 px-4">
-        <TabButton label="Collections" active={view === 'collections'} onClick={() => setView('collections')} />
+        <TabButton label={isMe ? 'Cities' : 'Collections'} active={view === 'collections'} onClick={() => setView('collections')} />
         <TabButton label="Pins" active={view === 'pins'} onClick={() => setView('pins')} />
       </div>
 
@@ -85,12 +86,14 @@ export function Profile({ creatorId }: { creatorId?: string }) {
             />
           ))}
           {myCollections.length === 0 && (
-            <div className="col-span-2 text-center text-outline text-sm py-12">No collections yet.</div>
+            <div className="col-span-2 text-center text-outline text-sm py-12">
+              {isMe ? 'No cities yet.' : 'No collections yet.'}
+            </div>
           )}
         </div>
       ) : (
         <div className="px-4 pt-4">
-          {CATEGORIES.map((cat) => {
+          {[...CATEGORIES, ...customCategories.map((c) => categoryById(c.id, customCategories))].map((cat) => {
             const items = myPins.filter((p) => p.category === cat.id)
             if (items.length === 0) return null
             return (

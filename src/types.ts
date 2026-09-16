@@ -1,4 +1,11 @@
-import type { CategoryId } from './categories'
+export type CustomCategory = {
+  id: string
+  ownerId: string
+  label: string
+  color: string
+  icon: string
+  createdAt: number
+}
 
 export type Creator = {
   id: string
@@ -26,7 +33,7 @@ export type Place = {
   id: string
   collectionId: string
   name: string
-  category: CategoryId
+  category: string
   lat: number
   lng: number
   address?: string

@@ -5,11 +5,13 @@ import { CollectionCard } from './CollectionCard'
 import { CATEGORY_BY_ID, type CategoryId } from '../categories'
 import type { Collection } from '../types'
 
-function topOwnCategory(places: { collectionId: string; category: CategoryId }[], ownCollectionIds: Set<string>): CategoryId | null {
+function topOwnCategory(places: { collectionId: string; category: string }[], ownCollectionIds: Set<string>): CategoryId | null {
   const counts: Partial<Record<CategoryId, number>> = {}
   for (const p of places) {
     if (!ownCollectionIds.has(p.collectionId)) continue
-    counts[p.category] = (counts[p.category] ?? 0) + 1
+    if (!(p.category in CATEGORY_BY_ID)) continue
+    const cat = p.category as CategoryId
+    counts[cat] = (counts[cat] ?? 0) + 1
   }
   let best: CategoryId | null = null
   let bestCount = 0

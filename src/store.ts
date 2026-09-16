@@ -2,8 +2,9 @@ import { useSyncExternalStore } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import type { CategoryId } from './categories'
-import type { Collection, Creator, Place } from './types'
+import type { Collection, Creator, CustomCategory, Place } from './types'
 import { MOCK_CREATORS, MOCK_COLLECTIONS, MOCK_PLACES, DEFAULT_FOLLOW_IDS, starterLisbonSeed } from './mockCreators'
+import { autoCustomCategoryColor } from './customCategoryIcons'
 
 const LEGACY_STORAGE_KEY = 'spotted:v1'
 
@@ -21,6 +22,8 @@ export type AppState = {
   creators: Creator[]
   collections: Collection[]
   places: Place[]
+  /** Categories the signed-in user has invented, usable across all their cities. */
+  customCategories: CustomCategory[]
   followedCreatorIds: string[]
   activeCollectionId: string | null
   /** Category IDs the user has toggled OFF (hidden from the map and list). */
@@ -56,6 +59,7 @@ const initial: AppState = {
   creators: [],
   collections: [],
   places: [],
+  customCategories: [],
   followedCreatorIds: [],
   activeCollectionId: null,
   hiddenCategories: [],
@@ -130,6 +134,36 @@ type PlaceRow = {
   created_at: string
 }
 
+type CustomCategoryRow = {
+  id: string
+  owner_id: string
+  label: string
+  color: string
+  icon: string
+  created_at: string
+}
+
+function customCategoryFromRow(r: CustomCategoryRow): CustomCategory {
+  return {
+    id: r.id,
+    ownerId: r.owner_id,
+    label: r.label,
+    color: r.color,
+    icon: r.icon,
+    createdAt: Date.parse(r.created_at),
+  }
+}
+
+function customCategoryToRow(c: CustomCategory) {
+  return {
+    id: c.id,
+    owner_id: c.ownerId,
+    label: c.label,
+    color: c.color,
+    icon: c.icon,
+  }
+}
+
 function collectionFromRow(r: CollectionRow): Collection {
   return {
     id: r.id,
@@ -147,7 +181,7 @@ function placeFromRow(r: PlaceRow): Place {
     id: r.id,
     collectionId: r.collection_id,
     name: r.name,
-    category: r.category as CategoryId,
+    category: r.category,
     lat: r.lat,
     lng: r.lng,
     address: r.address ?? undefined,
@@ -271,10 +305,12 @@ async function hydrateInner(user: User) {
     avatar_url: me.avatarUrl,
   })
 
-  const [{ data: collectionRows }, { data: followRows }] = await Promise.all([
+  const [{ data: collectionRows }, { data: followRows }, { data: customCategoryRows }] = await Promise.all([
     supabase.from('collections').select('*').eq('owner_id', user.id),
     supabase.from('followed_creators').select('creator_id').eq('user_id', user.id),
+    supabase.from('custom_categories').select('*').eq('owner_id', user.id),
   ])
+  const customCategories = (customCategoryRows ?? []).map(customCategoryFromRow)
 
   let collections = (collectionRows ?? []).map(collectionFromRow)
   let places: Place[] = []
@@ -340,6 +376,7 @@ async function hydrateInner(user: User) {
     creators: [me, ...MOCK_CREATORS],
     collections: [...collections, ...MOCK_COLLECTIONS],
     places: [...places, ...MOCK_PLACES],
+    customCategories,
     followedCreatorIds,
     activeCollectionId: collections[0]?.id ?? null,
   }))
@@ -442,6 +479,24 @@ export const actions = {
       selectedPlaceId: s.selectedPlaceId === placeId ? null : s.selectedPlaceId,
     }))
     supabase.from('places').delete().eq('id', placeId).then(({ error }) => logWriteError('deletePlace', error))
+  },
+
+  createCustomCategory(input: { label: string }): string {
+    if (!state.userId) throw new Error('Not signed in')
+    const category: CustomCategory = {
+      id: crypto.randomUUID(),
+      ownerId: state.userId,
+      label: input.label,
+      color: autoCustomCategoryColor(state.customCategories.length),
+      icon: 'tag',
+      createdAt: Date.now(),
+    }
+    set((s) => ({ ...s, customCategories: [...s.customCategories, category] }))
+    supabase
+      .from('custom_categories')
+      .insert(customCategoryToRow(category))
+      .then(({ error }) => logWriteError('createCustomCategory', error))
+    return category.id
   },
 
   toggleCategory(category: CategoryId) {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { X, Check } from 'lucide-react'
+import { X, Check, Plus } from 'lucide-react'
 import { CATEGORIES, type CategoryId } from '../categories'
+import { CUSTOM_CATEGORY_ICONS } from '../customCategoryIcons'
 import type { PickedPlace } from './PlaceSearch'
 import { actions, useAppState } from '../store'
 
@@ -9,7 +10,7 @@ type Props = {
   onCancel: () => void
   onSave: (input: {
     name: string
-    category: CategoryId
+    category: string
     notes?: string
     lat: number
     lng: number
@@ -29,18 +30,21 @@ type Props = {
 export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
   const userId = useAppState((s) => s.userId)
   const allCollections = useAppState((s) => s.collections)
+  const customCategories = useAppState((s) => s.customCategories)
   const myCollections = useMemo(
     () => allCollections.filter((c) => c.creatorId === userId),
     [allCollections, userId],
   )
 
   const [name, setName] = useState('')
-  const [category, setCategory] = useState<CategoryId>('eating')
+  const [category, setCategory] = useState<string>('eating')
   const [notes, setNotes] = useState('')
   const [instagramUrl, setInstagramUrl] = useState('')
   const [collectionId, setCollectionId] = useState<string | null>(null)
   const [newCollectionName, setNewCollectionName] = useState('')
   const [creatingNew, setCreatingNew] = useState(false)
+  const [creatingNewCategory, setCreatingNewCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   useEffect(() => {
     if (picked) {
@@ -51,6 +55,8 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
       setCollectionId(myCollections[0]?.id ?? null)
       setCreatingNew(myCollections.length === 0)
       setNewCollectionName('')
+      setCreatingNewCategory(false)
+      setNewCategoryName('')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked])
@@ -134,7 +140,10 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
                   <button
                     key={c.id}
                     type="button"
-                    onClick={() => setCategory(c.id)}
+                    onClick={() => {
+                      setCreatingNewCategory(false)
+                      setCategory(c.id)
+                    }}
                     className={
                       'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ' +
                       (active
@@ -148,10 +157,65 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
                   </button>
                 )
               })}
+              {customCategories.map((c) => {
+                const Icon = CUSTOM_CATEGORY_ICONS[c.icon] ?? CUSTOM_CATEGORY_ICONS.tag
+                const active = c.id === category
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCreatingNewCategory(false)
+                      setCategory(c.id)
+                    }}
+                    className={
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ' +
+                      (active
+                        ? 'border-transparent text-white shadow-sm'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-outline')
+                    }
+                    style={active ? { backgroundColor: c.color } : undefined}
+                  >
+                    <Icon className="h-3 w-3" strokeWidth={2.5} />
+                    {c.label}
+                  </button>
+                )
+              })}
+              {creatingNewCategory ? (
+                <input
+                  autoFocus
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newCategoryName.trim()) {
+                      const id = actions.createCustomCategory({ label: newCategoryName.trim() })
+                      setCategory(id)
+                      setCreatingNewCategory(false)
+                      setNewCategoryName('')
+                    } else if (e.key === 'Escape') {
+                      setCreatingNewCategory(false)
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!newCategoryName.trim()) setCreatingNewCategory(false)
+                  }}
+                  placeholder="New category name…"
+                  className="w-28 rounded-full border border-outline-variant bg-surface-container-lowest px-2.5 py-1 text-xs outline-none placeholder:text-outline focus:border-primary"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCreatingNewCategory(true)}
+                  className="inline-flex items-center gap-1 rounded-full border border-dashed border-outline-variant px-2.5 py-1 text-xs font-medium text-on-surface-variant hover:border-outline"
+                >
+                  <Plus className="h-3 w-3" strokeWidth={2.5} />
+                  New category
+                </button>
+              )}
             </div>
           </Field>
 
-          <Field label="Collection">
+          <Field label="City">
             <div className="space-y-1.5">
               {myCollections.map((c) => {
                 const active = !creatingNew && collectionId === c.id
@@ -191,11 +255,11 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
                     onClick={(e) => e.stopPropagation()}
-                    placeholder="New collection name…"
+                    placeholder="New city name…"
                     className="w-full bg-transparent text-sm outline-none placeholder:text-outline"
                   />
                 ) : (
-                  '+ New collection…'
+                  '+ New city…'
                 )}
               </button>
             </div>
