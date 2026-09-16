@@ -1,19 +1,22 @@
 import { useEffect } from 'react'
 import { ChevronLeft, Footprints, X as XIcon } from 'lucide-react'
 import { MapView } from './MapView'
+import { SpotDetailContent } from './SpotDetailContent'
 import { actions, useAppState } from '../store'
 
 export function CollectionMapView({ collectionId }: { collectionId: string }) {
   const collection = useAppState((s) => s.collections.find((c) => c.id === collectionId) ?? null)
-  const places = useAppState((s) => s.places)
+  const allPlaces = useAppState((s) => s.places)
+  const selectedId = useAppState((s) => s.selectedPlaceId)
   const compareSelection = useAppState((s) => s.compareSelection)
 
   useEffect(() => {
     actions.setActiveCollection(collectionId)
   }, [collectionId])
 
-  const pinCount = places.filter((p) => p.collectionId === collectionId).length
-  const compareAvailable = pinCount >= 2
+  const collectionPlaces = allPlaces.filter((p) => p.collectionId === collectionId)
+  const compareAvailable = collectionPlaces.length >= 2
+  const selectedPlace = collectionPlaces.find((p) => p.id === selectedId) ?? null
 
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden">
@@ -49,8 +52,10 @@ export function CollectionMapView({ collectionId }: { collectionId: string }) {
           </button>
         )}
       </div>
-      <div className="flex-1">
+
+      <div className="relative flex-1">
         <MapView
+          hideSelectionInfoWindow
           onAddPoi={(picked) =>
             actions.addPlace({
               collectionId,
@@ -62,9 +67,28 @@ export function CollectionMapView({ collectionId }: { collectionId: string }) {
               placeId: picked.placeId,
               photoUrl: picked.photoUrl,
               instagramUrl: picked.instagramUrl,
+              phoneNumber: picked.phoneNumber,
+              priceLevel: picked.priceLevel,
+              openingHours: picked.openingHours,
+              googleMapsUri: picked.googleMapsUri,
+              businessStatus: picked.businessStatus,
             })
           }
         />
+
+        {/* Bottom-sheet overlay for the tapped pin — map stays visible/interactive above it. */}
+        {selectedPlace && (
+          <div className="absolute left-4 right-16 bottom-28 z-10 max-h-[45%] overflow-y-auto rounded-3xl bg-surface shadow-float">
+            <button
+              onClick={() => actions.selectPlace(null)}
+              aria-label="Close"
+              className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full bg-surface/90 flex items-center justify-center shadow-card"
+            >
+              <XIcon size={15} />
+            </button>
+            <SpotDetailContent placeId={selectedPlace.id} />
+          </div>
+        )}
       </div>
     </div>
   )

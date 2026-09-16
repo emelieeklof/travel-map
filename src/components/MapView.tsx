@@ -30,6 +30,7 @@ import { CategoryMarker } from './CategoryMarker'
 import { LegacyCategoryMarker } from './LegacyCategoryMarker'
 import type { PickedPlace } from './PlaceSearch'
 import { resolveDefaultViewport, type Viewport } from './mapViewport'
+import { normalizePriceLevel } from '../lib/priceLevel'
 
 type RouteEndpoint = { lat: number; lng: number; name: string }
 
@@ -46,6 +47,11 @@ type PoiPreview = {
   userRatingCount?: number
   types?: string[]
   instagramUrl?: string
+  phoneNumber?: string
+  priceLevel?: number
+  openingHours?: string[]
+  googleMapsUri?: string
+  businessStatus?: string
 }
 
 /** Google's "website" field is sometimes literally an Instagram link (common for small
@@ -64,9 +70,13 @@ type Props = {
   /** Overrides the usual "last viewport / active collection / Lisbon" default —
    * used by the Add-spot flow to open centered on your current location. */
   initialViewport?: Viewport | null
+  /** Suppresses the small tap InfoWindow bubble — used when a caller shows its
+   * own richer card for the selected pin instead (e.g. the collection map view's
+   * bottom-sheet overlay). */
+  hideSelectionInfoWindow?: boolean
 }
 
-export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
+export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionInfoWindow }: Props) {
   const activeCollection = useAppState((s) =>
     s.collections.find((c) => c.id === s.activeCollectionId) ?? null,
   )
@@ -140,6 +150,11 @@ export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
             'userRatingCount',
             'types',
             'websiteURI',
+            'nationalPhoneNumber',
+            'priceLevel',
+            'regularOpeningHours',
+            'googleMapsURI',
+            'businessStatus',
           ],
         })
         const loc = place.location
@@ -157,6 +172,11 @@ export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
           userRatingCount: place.userRatingCount ?? undefined,
           types: place.types ?? undefined,
           instagramUrl: instagramUrlFromWebsite(place.websiteURI),
+          phoneNumber: place.nationalPhoneNumber ?? undefined,
+          priceLevel: normalizePriceLevel(place.priceLevel),
+          openingHours: place.regularOpeningHours?.weekdayDescriptions ?? undefined,
+          googleMapsUri: place.googleMapsURI ?? undefined,
+          businessStatus: place.businessStatus ?? undefined,
         })
       } catch (err) {
         console.error('Failed to fetch POI details', err)
@@ -225,7 +245,7 @@ export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
             />
           )
         })}
-        <SelectedPlaceInfoWindow />
+        {!hideSelectionInfoWindow && <SelectedPlaceInfoWindow />}
         {poiPreview && (
           <PoiPreviewWindow
             poi={poiPreview}
@@ -241,6 +261,11 @@ export function MapView({ onAddPoi, standalone, initialViewport }: Props) {
                 placeId: poiPreview.placeId,
                 photoUrl: poiPreview.photoUrl,
                 instagramUrl: poiPreview.instagramUrl,
+                phoneNumber: poiPreview.phoneNumber,
+                priceLevel: poiPreview.priceLevel,
+                openingHours: poiPreview.openingHours,
+                googleMapsUri: poiPreview.googleMapsUri,
+                businessStatus: poiPreview.businessStatus,
                 preferredCategory: guessCategoryFromTypes(poiPreview.types),
               })
               setPoiPreview(null)

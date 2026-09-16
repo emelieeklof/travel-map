@@ -17,6 +17,11 @@ type Props = {
     placeId?: string
     photoUrl?: string
     instagramUrl?: string
+    phoneNumber?: string
+    priceLevel?: number
+    openingHours?: string[]
+    googleMapsUri?: string
+    businessStatus?: string
     collectionId: string
   }) => void
 }
@@ -77,6 +82,11 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
       placeId: picked.placeId,
       photoUrl: picked.photoUrl,
       instagramUrl: instagramUrl.trim() || undefined,
+      phoneNumber: picked.phoneNumber,
+      priceLevel: picked.priceLevel,
+      openingHours: picked.openingHours,
+      googleMapsUri: picked.googleMapsUri,
+      businessStatus: picked.businessStatus,
       collectionId: finalCollectionId,
     })
   }

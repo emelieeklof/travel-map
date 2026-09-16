@@ -122,6 +122,11 @@ type PlaceRow = {
   photo_url: string | null
   instagram_url: string | null
   place_id: string | null
+  phone_number: string | null
+  price_level: number | null
+  opening_hours: string[] | null
+  google_maps_uri: string | null
+  business_status: string | null
   created_at: string
 }
 
@@ -150,6 +155,11 @@ function placeFromRow(r: PlaceRow): Place {
     photoUrl: r.photo_url ?? undefined,
     instagramUrl: r.instagram_url ?? undefined,
     placeId: r.place_id ?? undefined,
+    phoneNumber: r.phone_number ?? undefined,
+    priceLevel: r.price_level ?? undefined,
+    openingHours: r.opening_hours ?? undefined,
+    googleMapsUri: r.google_maps_uri ?? undefined,
+    businessStatus: r.business_status ?? undefined,
     createdAt: Date.parse(r.created_at),
   }
 }
@@ -179,6 +189,11 @@ function placeToRow(p: Place) {
     photo_url: p.photoUrl ?? null,
     instagram_url: p.instagramUrl ?? null,
     place_id: p.placeId ?? null,
+    phone_number: p.phoneNumber ?? null,
+    price_level: p.priceLevel ?? null,
+    opening_hours: p.openingHours ?? null,
+    google_maps_uri: p.googleMapsUri ?? null,
+    business_status: p.businessStatus ?? null,
   }
 }
 
@@ -412,6 +427,11 @@ export const actions = {
     if (patch.instagramUrl !== undefined) row.instagram_url = patch.instagramUrl
     if (patch.lat !== undefined) row.lat = patch.lat
     if (patch.lng !== undefined) row.lng = patch.lng
+    if (patch.phoneNumber !== undefined) row.phone_number = patch.phoneNumber
+    if (patch.priceLevel !== undefined) row.price_level = patch.priceLevel
+    if (patch.openingHours !== undefined) row.opening_hours = patch.openingHours
+    if (patch.googleMapsUri !== undefined) row.google_maps_uri = patch.googleMapsUri
+    if (patch.businessStatus !== undefined) row.business_status = patch.businessStatus
     supabase.from('places').update(row).eq('id', placeId).then(({ error }) => logWriteError('updatePlace', error))
   },
 

@@ -67,6 +67,11 @@ export function AddSpotScreen({ onClose }: { onClose: () => void }) {
             placeId: input.placeId,
             photoUrl: input.photoUrl,
             instagramUrl: input.instagramUrl,
+            phoneNumber: input.phoneNumber,
+            priceLevel: input.priceLevel,
+            openingHours: input.openingHours,
+            googleMapsUri: input.googleMapsUri,
+            businessStatus: input.businessStatus,
             notes: input.notes,
           })
           setPicked(null)

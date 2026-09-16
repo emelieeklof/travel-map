@@ -35,5 +35,12 @@ export type Place = {
   instagramUrl?: string
   // Google Place ID (when added via Places search) — useful for re-fetching details later
   placeId?: string
+  phoneNumber?: string
+  /** 0 (free) – 4 (very expensive), same scale Google uses. */
+  priceLevel?: number
+  /** Weekly hours as Google formats them, e.g. "Monday: 9:00 AM – 5:00 PM". */
+  openingHours?: string[]
+  googleMapsUri?: string
+  businessStatus?: string
   createdAt: number
 }
