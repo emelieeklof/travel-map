@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Bookmark, Navigation, Share2, Phone, Clock, ChevronDown, ExternalLink } from 'lucide-react'
 import { useAppState, actions } from '../store'
-import { CATEGORY_BY_ID } from '../categories'
+import { categoryById } from '../categories'
 import { priceLevelToDollarSigns } from '../lib/priceLevel'
 
 function InstagramIcon({ size = 16 }: { size?: number }) {
@@ -23,13 +23,14 @@ export function SpotDetailContent({ placeId }: { placeId: string }) {
   const places = useAppState((s) => s.places)
   const collections = useAppState((s) => s.collections)
   const creators = useAppState((s) => s.creators)
+  const customCategories = useAppState((s) => s.customCategories)
   const place = places.find((p) => p.id === placeId)
   const [hoursOpen, setHoursOpen] = useState(false)
   if (!place) return null
 
   const collection = collections.find((c) => c.id === place.collectionId)
   const creator = creators.find((c) => c.id === collection?.creatorId)
-  const cat = CATEGORY_BY_ID[place.category]
+  const cat = categoryById(place.category, customCategories)
 
   // "Vibes from" — other pins with a similar name elsewhere, curated by other creators.
   const vibes = places.filter(

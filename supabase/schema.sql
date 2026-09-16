@@ -49,6 +49,16 @@ alter table places add column if not exists opening_hours text[];
 alter table places add column if not exists google_maps_uri text;
 alter table places add column if not exists business_status text;
 
+create table if not exists custom_categories (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references profiles (id) on delete cascade,
+  label text not null,
+  color text not null,
+  icon text not null,
+  created_at timestamptz not null default now(),
+  unique (owner_id, label)
+);
+
 create table if not exists followed_creators (
   user_id uuid not null references profiles (id) on delete cascade,
   creator_id text not null,
@@ -58,6 +68,7 @@ create table if not exists followed_creators (
 alter table profiles enable row level security;
 alter table collections enable row level security;
 alter table places enable row level security;
+alter table custom_categories enable row level security;
 alter table followed_creators enable row level security;
 
 -- profiles: you can read/write only your own row
@@ -106,6 +117,17 @@ create policy "places: delete own" on places
   for delete using (
     exists (select 1 from collections c where c.id = places.collection_id and c.owner_id = auth.uid())
   );
+
+-- custom_categories: you can read/write only rows you own
+drop policy if exists "custom_categories: select own" on custom_categories;
+create policy "custom_categories: select own" on custom_categories
+  for select using (auth.uid() = owner_id);
+drop policy if exists "custom_categories: insert own" on custom_categories;
+create policy "custom_categories: insert own" on custom_categories
+  for insert with check (auth.uid() = owner_id);
+drop policy if exists "custom_categories: delete own" on custom_categories;
+create policy "custom_categories: delete own" on custom_categories
+  for delete using (auth.uid() = owner_id);
 
 -- followed_creators: you can read/write only your own follow rows
 drop policy if exists "follows: select own" on followed_creators;

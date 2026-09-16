@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddPlaceDialog } from './AddPlaceDialog'
 import type { PickedPlace } from './PlaceSearch'
-import type { Collection } from '../types'
+import type { Collection, CustomCategory } from '../types'
 import { createMockUseAppState } from '../test/mockUseAppState'
 
 const state = {
@@ -11,14 +11,19 @@ const state = {
   collections: [
     { id: 'col-1', name: 'Existing collection', createdAt: 0, creatorId: 'me-123' },
   ] as Collection[],
+  customCategories: [] as CustomCategory[],
 }
 
 const createCollection = vi.fn((_input: { name: string }) => 'new-col-id')
+const createCustomCategory = vi.fn((_input: { label: string }) => 'new-cat-id')
 const { useAppState } = createMockUseAppState(state)
 
 vi.mock('../store', () => ({
   useAppState: (selector: (s: typeof state) => unknown) => useAppState(selector),
-  actions: { createCollection: (input: { name: string }) => createCollection(input) },
+  actions: {
+    createCollection: (input: { name: string }) => createCollection(input),
+    createCustomCategory: (input: { label: string }) => createCustomCategory(input),
+  },
 }))
 
 const picked: PickedPlace = { name: 'Cafe Du Jour', lat: 1, lng: 2 }
@@ -51,8 +56,8 @@ describe('AddPlaceDialog', () => {
     const onSave = vi.fn()
     render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} />)
 
-    await userEvent.click(screen.getByText('+ New collection…'))
-    await userEvent.type(screen.getByPlaceholderText('New collection name…'), 'Athens trip')
+    await userEvent.click(screen.getByText('+ New city…'))
+    await userEvent.type(screen.getByPlaceholderText('New city name…'), 'Athens trip')
     await userEvent.click(screen.getByRole('button', { name: 'Save spot' }))
 
     expect(createCollection).toHaveBeenCalledWith({ name: 'Athens trip' })

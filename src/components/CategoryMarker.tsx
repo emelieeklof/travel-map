@@ -1,15 +1,16 @@
 import { AdvancedMarker } from '@vis.gl/react-google-maps'
-import { CATEGORY_BY_ID } from '../categories'
-import type { Place } from '../types'
+import { categoryById } from '../categories'
+import type { CustomCategory, Place } from '../types'
 
 type Props = {
   place: Place
   selected: boolean
   onClick: () => void
+  customCategories: readonly CustomCategory[]
 }
 
-export function CategoryMarker({ place, selected, onClick }: Props) {
-  const category = CATEGORY_BY_ID[place.category]
+export function CategoryMarker({ place, selected, onClick, customCategories }: Props) {
+  const category = categoryById(place.category, customCategories)
   const Icon = category.icon
   return (
     <AdvancedMarker

@@ -7,7 +7,7 @@ import { Explore } from './components/Explore'
 import { Guides } from './components/Guides'
 import { Profile } from './components/Profile'
 import { SpotDetail } from './components/SpotDetail'
-import { CollectionMapView } from './components/CollectionMapView'
+import { CityView } from './components/CityView'
 import { AddSpotScreen } from './components/AddSpotScreen'
 import { Logo } from './components/Logo'
 import { SignIn } from './components/SignIn'
@@ -110,7 +110,7 @@ function Shell() {
         ) : detail?.type === 'creator' ? (
           <Profile creatorId={detail.id} />
         ) : detail?.type === 'collection' ? (
-          <CollectionMapView collectionId={detail.id} />
+          <CityView collectionId={detail.id} />
         ) : tab === 'home' ? (
           <FollowingFeed />
         ) : tab === 'explore' ? (

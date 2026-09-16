@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Profile } from './Profile'
-import type { Place, Creator, Collection } from '../types'
+import type { Place, Creator, Collection, CustomCategory } from '../types'
 import { createMockUseAppState } from '../test/mockUseAppState'
 
 const me: Creator = {
@@ -33,6 +33,7 @@ const state = {
   collections: [collection],
   places,
   followedCreatorIds: [] as string[],
+  customCategories: [] as CustomCategory[],
 }
 
 const { useAppState } = createMockUseAppState(state)
@@ -56,5 +57,30 @@ describe('Profile — Pins tab grouped by category', () => {
     expect(screen.getByText('Cafe B')).toBeInTheDocument()
     expect(screen.getByText('Museum')).toBeInTheDocument()
     expect(screen.queryByText('Shopping')).not.toBeInTheDocument()
+  })
+
+  it('shows "Cities" as the collections-tab label for your own profile', () => {
+    render(<Profile />)
+    expect(screen.getByRole('button', { name: 'Cities' })).toBeInTheDocument()
+  })
+
+  it('groups a pin with a custom category under its own header', async () => {
+    const original = { places: state.places, customCategories: state.customCategories }
+    state.customCategories = [
+      { id: 'cat-mushroom', ownerId: 'me-123', label: 'Mushroom spots', color: '#466556', icon: 'leaf', createdAt: 0 },
+    ]
+    state.places = [
+      ...places,
+      { id: 'p-custom-1', collectionId: 'col-1', name: 'Forest patch', category: 'cat-mushroom', lat: 0, lng: 0, createdAt: 0 },
+    ]
+    try {
+      render(<Profile />)
+      await userEvent.click(screen.getByRole('button', { name: 'Pins' }))
+      expect(screen.getByText('Mushroom spots')).toBeInTheDocument()
+      expect(screen.getByText('Forest patch')).toBeInTheDocument()
+    } finally {
+      state.places = original.places
+      state.customCategories = original.customCategories
+    }
   })
 })

@@ -1,9 +1,10 @@
-import { CATEGORY_BY_ID } from '../categories'
+import { categoryById } from '../categories'
 import type { Place } from '../types'
-import { actions } from '../store'
+import { actions, useAppState } from '../store'
 
 export function PinTile({ place }: { place: Place }) {
-  const cat = CATEGORY_BY_ID[place.category]
+  const customCategories = useAppState((s) => s.customCategories)
+  const cat = categoryById(place.category, customCategories)
   return (
     <button
       onClick={() => actions.openDetail({ type: 'spot', id: place.id })}

@@ -25,7 +25,7 @@ import {
   Navigation,
 } from 'lucide-react'
 import { actions, useAppState } from '../store'
-import { CATEGORY_BY_ID, type CategoryId } from '../categories'
+import { categoryById, type CategoryId } from '../categories'
 import { CategoryMarker } from './CategoryMarker'
 import { LegacyCategoryMarker } from './LegacyCategoryMarker'
 import type { PickedPlace } from './PlaceSearch'
@@ -74,13 +74,17 @@ type Props = {
    * own richer card for the selected pin instead (e.g. the collection map view's
    * bottom-sheet overlay). */
   hideSelectionInfoWindow?: boolean
+  /** When set (non-empty), only places whose category is in this list are shown —
+   * a view-local filter, independent of the global hiddenCategories toggle. */
+  categoryFilter?: string[]
 }
 
-export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionInfoWindow }: Props) {
+export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionInfoWindow, categoryFilter }: Props) {
   const activeCollection = useAppState((s) =>
     s.collections.find((c) => c.id === s.activeCollectionId) ?? null,
   )
   const places = useAppState((s) => s.places)
+  const customCategories = useAppState((s) => s.customCategories)
   const hidden = useAppState((s) => s.hiddenCategories)
   const selectedId = useAppState((s) => s.selectedPlaceId)
   const focusMode = useAppState((s) => s.focusMode)
@@ -114,9 +118,12 @@ export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionIn
   const visiblePlaces = useMemo(() => {
     if (!activeCollection) return []
     return places.filter(
-      (p) => p.collectionId === activeCollection.id && !hidden.includes(p.category),
+      (p) =>
+        p.collectionId === activeCollection.id &&
+        !hidden.includes(p.category as CategoryId) &&
+        (!categoryFilter || categoryFilter.length === 0 || categoryFilter.includes(p.category)),
     )
-  }, [places, hidden, activeCollection])
+  }, [places, hidden, activeCollection, categoryFilter])
 
   // Toggling focus mode remounts the map (mapId is immutable on a live instance),
   // which would otherwise snap back to the collection's stored center/zoom and
@@ -235,6 +242,7 @@ export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionIn
               place={place}
               selected={place.id === selectedId}
               onClick={onClick}
+              customCategories={customCategories}
             />
           ) : (
             <CategoryMarker
@@ -242,6 +250,7 @@ export function MapView({ onAddPoi, standalone, initialViewport, hideSelectionIn
               place={place}
               selected={place.id === selectedId}
               onClick={onClick}
+              customCategories={customCategories}
             />
           )
         })}
@@ -513,8 +522,9 @@ function SelectedPlaceInfoWindow() {
   )
   const userLocation = useAppState((s) => s.userLocation)
   const locationStatus = useAppState((s) => s.locationStatus)
+  const customCategories = useAppState((s) => s.customCategories)
   if (!place) return null
-  const category = CATEGORY_BY_ID[place.category]
+  const category = categoryById(place.category, customCategories)
   return (
     <InfoWindow
       position={{ lat: place.lat, lng: place.lng }}
