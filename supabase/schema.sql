@@ -33,11 +33,21 @@ create table if not exists places (
   photo_url text,
   instagram_url text,
   place_id text,
+  phone_number text,
+  price_level int,
+  opening_hours text[],
+  google_maps_uri text,
+  business_status text,
   created_at timestamptz not null default now()
 );
 
--- Migration: run this alone if `places` already existed before `instagram_url` was added.
+-- Migrations: safe to run alone if `places` already existed before these columns were added.
 alter table places add column if not exists instagram_url text;
+alter table places add column if not exists phone_number text;
+alter table places add column if not exists price_level int;
+alter table places add column if not exists opening_hours text[];
+alter table places add column if not exists google_maps_uri text;
+alter table places add column if not exists business_status text;
 
 create table if not exists followed_creators (
   user_id uuid not null references profiles (id) on delete cascade,

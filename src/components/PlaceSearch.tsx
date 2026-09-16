@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { Search, Loader2 } from 'lucide-react'
 import type { CategoryId } from '../categories'
+import { normalizePriceLevel } from '../lib/priceLevel'
 
 export type PickedPlace = {
   name: string
@@ -11,6 +12,11 @@ export type PickedPlace = {
   placeId?: string
   photoUrl?: string
   instagramUrl?: string
+  phoneNumber?: string
+  priceLevel?: number
+  openingHours?: string[]
+  googleMapsUri?: string
+  businessStatus?: string
   /** If provided, AddPlaceDialog will preselect this category instead of guessing from the name. */
   preferredCategory?: CategoryId
 }
@@ -41,7 +47,19 @@ export function PlaceSearch({ onPick, disabled }: Props) {
     // If you hit that wall, swap this for PlaceAutocompleteElement — see
     // README "Roadmap" section.
     const autocomplete = new placesLib.Autocomplete(inputRef.current, {
-      fields: ['name', 'geometry.location', 'formatted_address', 'place_id', 'website', 'photos'],
+      fields: [
+        'name',
+        'geometry.location',
+        'formatted_address',
+        'place_id',
+        'website',
+        'photos',
+        'formatted_phone_number',
+        'price_level',
+        'opening_hours',
+        'url',
+        'business_status',
+      ],
     })
     const listener = autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace()
@@ -55,6 +73,11 @@ export function PlaceSearch({ onPick, disabled }: Props) {
         placeId: place.place_id,
         photoUrl: place.photos?.[0]?.getUrl({ maxWidth: 640, maxHeight: 480 }),
         instagramUrl: instagramUrlFromWebsite(place.website),
+        phoneNumber: place.formatted_phone_number,
+        priceLevel: normalizePriceLevel(place.price_level),
+        openingHours: place.opening_hours?.weekday_text,
+        googleMapsUri: place.url,
+        businessStatus: place.business_status,
       })
       if (inputRef.current) inputRef.current.value = ''
     })
