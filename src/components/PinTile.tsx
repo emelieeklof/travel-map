@@ -8,8 +8,9 @@ export function PinTile({ place }: { place: Place }) {
   return (
     <button
       onClick={() => actions.openDetail({ type: 'spot', id: place.id })}
-      className="rounded-md overflow-hidden bg-surface-container-lowest shadow-card border border-outline-variant/40 text-left"
+      className="relative rounded-md overflow-hidden bg-surface-container-lowest shadow-card border border-outline-variant/40 text-left"
     >
+      <div className="absolute left-0 top-3 bottom-3 w-1" style={{ backgroundColor: cat.color }} />
       <div className="h-28 bg-surface-container-high">
         {place.photoUrl ? (
           <img src={place.photoUrl} alt="" className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
