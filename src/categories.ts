@@ -8,6 +8,7 @@ import {
   Wine,
   Mountain,
   MapPin,
+  Waves,
   type LucideIcon,
 } from 'lucide-react'
 import type { CustomCategory } from './types'
@@ -23,6 +24,7 @@ export type CategoryId =
   | 'thrifting'
   | 'restaurant'
   | 'cafe'
+  | 'surfing'
 
 export type Category = {
   id: CategoryId
@@ -42,6 +44,7 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: Shirt },
   { id: 'restaurant', label: 'Restaurant', color: '#8e5c4c', icon: UtensilsCrossed },
   { id: 'cafe', label: 'Cafe', color: '#b8863f', icon: Coffee },
+  { id: 'surfing', label: 'Surfing', color: '#3e8e8e', icon: Waves },
 ]
 
 export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
@@ -97,4 +100,6 @@ export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
     '<path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6L8 14"/><path d="m4 12.4 6.1 6.1"/><path d="M7 22 11 18"/><path d="m17 15 1.4 1.4"/><path d="m21 21-2.4-2.4"/>',
   cafe:
     '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>',
+  surfing:
+    '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/>',
 }

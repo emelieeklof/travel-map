@@ -432,7 +432,7 @@ function WalkingRoutePanel({
   // (Polyline above lives inside the Map; this panel sits in the same MapView
   // wrapper as the focus-mode toggle.)
   return (
-    <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 w-[min(420px,calc(100%-2rem))] -translate-x-1/2">
+    <div className="pointer-events-none absolute bottom-36 left-1/2 z-10 w-[min(420px,calc(100%-2rem))] -translate-x-1/2">
       <div className="pointer-events-auto rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-float">
         <div className="flex items-start justify-between gap-2 border-b border-outline-variant px-4 py-2.5">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary">
