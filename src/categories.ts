@@ -12,6 +12,7 @@ import {
   IceCreamCone,
   Palette,
   Landmark,
+  Ham,
   type LucideIcon,
 } from 'lucide-react'
 import { SurfingIcon } from './components/SurfingIcon'
@@ -33,6 +34,7 @@ export type CategoryId =
   | 'gelato'
   | 'art'
   | 'museum'
+  | 'deli'
 
 export type Category = {
   id: CategoryId
@@ -57,6 +59,7 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'gelato', label: 'Gelato', color: '#c98a4b', icon: IceCreamCone },
   { id: 'art', label: 'Art', color: '#9e5c8e', icon: Palette },
   { id: 'museum', label: 'Museum', color: '#6b5c3e', icon: Landmark },
+  { id: 'deli', label: 'Deli', color: '#a3684a', icon: Ham },
 ]
 
 export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
@@ -133,4 +136,6 @@ export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
     '<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8Z"/><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/>',
   museum:
     '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="m3 11 9-7 9 7Z"/>',
+  deli:
+    '<path d="M18.9 5.1a3 3 0 0 0-4.24 0L4.6 15.2a2.5 2.5 0 0 0 3.54 3.54L18.2 8.66a3 3 0 0 0 .7-3.56Z"/><path d="m8.5 12.5 3 3"/><path d="m6 15 3 3"/>',
 }
