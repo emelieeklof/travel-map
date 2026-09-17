@@ -1,33 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { Search, Loader2 } from 'lucide-react'
-import type { CategoryId } from '../categories'
-import { normalizePriceLevel } from '../lib/priceLevel'
+import { AUTOCOMPLETE_FIELDS, placeResultToPicked, type PickedPlace } from '../lib/placeAutocomplete'
 
-export type PickedPlace = {
-  name: string
-  lat: number
-  lng: number
-  address?: string
-  placeId?: string
-  photoUrl?: string
-  instagramUrl?: string
-  phoneNumber?: string
-  priceLevel?: number
-  openingHours?: string[]
-  googleMapsUri?: string
-  businessStatus?: string
-  /** If provided, AddPlaceDialog will preselect this category instead of guessing from the name. */
-  preferredCategory?: CategoryId
-}
-
-/** Google's "website" field is sometimes literally an Instagram link (common for small
- * businesses without a real site) — only use it when it actually is one, so we never
- * mislabel a real website as Instagram. */
-function instagramUrlFromWebsite(website?: string | null): string | undefined {
-  if (!website) return undefined
-  return /instagram\.com|instagr\.am/i.test(website) ? website : undefined
-}
+export type { PickedPlace }
 
 type Props = {
   onPick: (place: PickedPlace) => void
@@ -47,38 +23,12 @@ export function PlaceSearch({ onPick, disabled }: Props) {
     // If you hit that wall, swap this for PlaceAutocompleteElement — see
     // README "Roadmap" section.
     const autocomplete = new placesLib.Autocomplete(inputRef.current, {
-      fields: [
-        'name',
-        'geometry.location',
-        'formatted_address',
-        'place_id',
-        'website',
-        'photos',
-        'formatted_phone_number',
-        'price_level',
-        'opening_hours',
-        'url',
-        'business_status',
-      ],
+      fields: AUTOCOMPLETE_FIELDS,
     })
     const listener = autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace()
-      const loc = place.geometry?.location
-      if (!loc) return
-      onPick({
-        name: place.name ?? 'Unnamed place',
-        lat: loc.lat(),
-        lng: loc.lng(),
-        address: place.formatted_address,
-        placeId: place.place_id,
-        photoUrl: place.photos?.[0]?.getUrl({ maxWidth: 640, maxHeight: 480 }),
-        instagramUrl: instagramUrlFromWebsite(place.website),
-        phoneNumber: place.formatted_phone_number,
-        priceLevel: normalizePriceLevel(place.price_level),
-        openingHours: place.opening_hours?.weekday_text,
-        googleMapsUri: place.url,
-        businessStatus: place.business_status,
-      })
+      const picked = placeResultToPicked(autocomplete.getPlace())
+      if (!picked) return
+      onPick(picked)
       if (inputRef.current) inputRef.current.value = ''
     })
     setReady(true)

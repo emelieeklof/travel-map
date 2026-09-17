@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
-import { X, Check, Plus } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMapsLibrary } from '@vis.gl/react-google-maps'
+import { X, Check, Plus, Search, Loader2 } from 'lucide-react'
 import { CATEGORIES, type CategoryId } from '../categories'
 import { CUSTOM_CATEGORY_ICONS } from '../customCategoryIcons'
 import type { PickedPlace } from './PlaceSearch'
+import { AUTOCOMPLETE_FIELDS, placeResultToPicked } from '../lib/placeAutocomplete'
 import { actions, useAppState } from '../store'
 
 type Props = {
@@ -25,9 +27,12 @@ type Props = {
     businessStatus?: string
     collectionId: string
   }) => void
+  /** Called once the dialog is fully done (not staying open for another pin) —
+   * with how many pins were created in this streak (0 if cancelled). */
+  onDone: (createdCount: number) => void
 }
 
-export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
+export function AddPlaceDialog({ picked, onCancel, onSave, onDone }: Props) {
   const userId = useAppState((s) => s.userId)
   const allCollections = useAppState((s) => s.collections)
   const customCategories = useAppState((s) => s.customCategories)
@@ -36,6 +41,7 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
     [allCollections, userId],
   )
 
+  const [currentPlace, setCurrentPlace] = useState<PickedPlace | null>(null)
   const [name, setName] = useState('')
   const [category, setCategory] = useState<string>('eating')
   const [notes, setNotes] = useState('')
@@ -45,36 +51,51 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
   const [creatingNew, setCreatingNew] = useState(false)
   const [creatingNewCategory, setCreatingNewCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [createAnother, setCreateAnother] = useState(false)
+  const [sessionCount, setSessionCount] = useState(0)
+
+  const applyPicked = (p: PickedPlace) => {
+    setCurrentPlace(p)
+    setName(p.name)
+    setInstagramUrl(p.instagramUrl ?? '')
+    setCategory(p.preferredCategory ?? guessCategory(p.name))
+  }
 
   useEffect(() => {
     if (picked) {
-      setName(picked.name)
+      applyPicked(picked)
       setNotes('')
-      setInstagramUrl(picked.instagramUrl ?? '')
-      setCategory(picked.preferredCategory ?? guessCategory(picked.name))
       setCollectionId(myCollections[0]?.id ?? null)
       setCreatingNew(myCollections.length === 0)
       setNewCollectionName('')
       setCreatingNewCategory(false)
       setNewCategoryName('')
+      setCreateAnother(false)
+      setSessionCount(0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked])
 
+  const handleClose = () => {
+    if (sessionCount > 0) onDone(sessionCount)
+    else onCancel()
+  }
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
+      if (e.key === 'Escape') handleClose()
     }
     if (picked) window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [picked, onCancel])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [picked])
 
   if (!picked) return null
 
-  const canSubmit = name.trim() && (creatingNew ? newCollectionName.trim() : collectionId)
+  const canSubmit = name.trim() && currentPlace && (creatingNew ? newCollectionName.trim() : collectionId)
 
   const submit = () => {
-    if (!canSubmit) return
+    if (!canSubmit || !currentPlace) return
     const finalCollectionId = creatingNew
       ? actions.createCollection({ name: newCollectionName.trim() })
       : collectionId!
@@ -82,19 +103,35 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
       name: name.trim(),
       category,
       notes: notes.trim() || undefined,
-      lat: picked.lat,
-      lng: picked.lng,
-      address: picked.address,
-      placeId: picked.placeId,
-      photoUrl: picked.photoUrl,
+      lat: currentPlace.lat,
+      lng: currentPlace.lng,
+      address: currentPlace.address,
+      placeId: currentPlace.placeId,
+      photoUrl: currentPlace.photoUrl,
       instagramUrl: instagramUrl.trim() || undefined,
-      phoneNumber: picked.phoneNumber,
-      priceLevel: picked.priceLevel,
-      openingHours: picked.openingHours,
-      googleMapsUri: picked.googleMapsUri,
-      businessStatus: picked.businessStatus,
+      phoneNumber: currentPlace.phoneNumber,
+      priceLevel: currentPlace.priceLevel,
+      openingHours: currentPlace.openingHours,
+      googleMapsUri: currentPlace.googleMapsUri,
+      businessStatus: currentPlace.businessStatus,
       collectionId: finalCollectionId,
     })
+    const newCount = sessionCount + 1
+    if (createAnother) {
+      setSessionCount(newCount)
+      setCollectionId(finalCollectionId)
+      setCreatingNew(false)
+      setNewCollectionName('')
+      setCurrentPlace(null)
+      setName('')
+      setNotes('')
+      setInstagramUrl('')
+      setCategory('eating')
+      setCreatingNewCategory(false)
+      setNewCategoryName('')
+    } else {
+      onDone(newCount)
+    }
   }
 
   return (
@@ -106,7 +143,7 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
             <p className="mt-0.5 text-xs text-on-surface-variant">Tag a category and choose where to save it.</p>
           </div>
           <button
-            onClick={onCancel}
+            onClick={handleClose}
             className="rounded-md p-1 text-outline hover:bg-surface-container hover:text-on-surface"
             aria-label="Close"
           >
@@ -116,19 +153,16 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
 
         <div className="space-y-4 px-5 py-4">
           <Field label="Name">
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submit()
-              }}
-              className="w-full rounded-lg border border-outline-variant px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15"
+            <NameSearchInput
+              name={name}
+              onNameChange={setName}
+              onPick={applyPicked}
+              onEnter={submit}
             />
           </Field>
 
-          {picked.address && (
-            <div className="-mt-2 text-xs text-on-surface-variant">{picked.address}</div>
+          {currentPlace?.address && (
+            <div className="-mt-2 text-xs text-on-surface-variant">{currentPlace.address}</div>
           )}
 
           <Field label="Category">
@@ -286,22 +320,85 @@ export function AddPlaceDialog({ picked, onCancel, onSave }: Props) {
           </Field>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-outline-variant px-5 py-3">
-          <button
-            onClick={onCancel}
-            className="rounded-full px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={submit}
-            disabled={!canSubmit}
-            className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Save spot
-          </button>
+        <div className="flex items-center justify-between gap-2 border-t border-outline-variant px-5 py-3">
+          <label className="flex items-center gap-2 text-sm text-on-surface-variant">
+            <input
+              type="checkbox"
+              checked={createAnother}
+              onChange={(e) => setCreateAnother(e.target.checked)}
+              className="h-4 w-4 rounded border-outline-variant accent-primary"
+            />
+            Create another
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleClose}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submit}
+              disabled={!canSubmit}
+              className="rounded-full bg-primary px-3.5 py-1.5 text-sm font-medium text-on-primary hover:bg-primary-container disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save spot
+            </button>
+          </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Name field that doubles as a live Google Places search — same autocomplete
+ * behavior as the map's search bar, but controlled so the displayed text can
+ * also be edited freely or reset between "Create another" entries. */
+function NameSearchInput({
+  name,
+  onNameChange,
+  onPick,
+  onEnter,
+}: {
+  name: string
+  onNameChange: (name: string) => void
+  onPick: (place: PickedPlace) => void
+  onEnter: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null)
+  const placesLib = useMapsLibrary('places')
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    if (!placesLib || !inputRef.current) return
+    const autocomplete = new placesLib.Autocomplete(inputRef.current, { fields: AUTOCOMPLETE_FIELDS })
+    const listener = autocomplete.addListener('place_changed', () => {
+      const picked = placeResultToPicked(autocomplete.getPlace())
+      if (picked) onPick(picked)
+    })
+    setReady(true)
+    return () => listener.remove()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placesLib])
+
+  return (
+    <div className="relative">
+      {ready ? (
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-outline" />
+      ) : (
+        <Loader2 className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-outline" />
+      )}
+      <input
+        ref={inputRef}
+        autoFocus
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') onEnter()
+        }}
+        placeholder="Search for a place, or type a name…"
+        className="w-full rounded-lg border border-outline-variant py-2 pl-8 pr-3 text-sm outline-none placeholder:text-outline focus:border-primary focus:ring-2 focus:ring-primary/15"
+      />
     </div>
   )
 }
