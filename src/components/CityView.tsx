@@ -3,7 +3,7 @@ import { ChevronLeft, Footprints, Map as MapIcon, List as ListIcon, X as XIcon }
 import { MapView } from './MapView'
 import { SpotDetailContent } from './SpotDetailContent'
 import { PinTile } from './PinTile'
-import { CATEGORIES, categoryById, type Category } from '../categories'
+import { allCategoriesSorted, type Category } from '../categories'
 import { actions, useAppState } from '../store'
 import type { CustomCategory, Place } from '../types'
 
@@ -26,9 +26,7 @@ export function CityView({ collectionId }: { collectionId: string }) {
 
   const presentCategories = useMemo(() => {
     const ids = new Set(collectionPlaces.map((p) => p.category))
-    return [...CATEGORIES, ...customCategories]
-      .filter((c) => ids.has(c.id))
-      .map((c) => categoryById(c.id, customCategories))
+    return allCategoriesSorted(customCategories).filter((c) => ids.has(c.id))
   }, [collectionPlaces, customCategories])
 
   const filteredPlaces = useMemo(
@@ -188,10 +186,7 @@ function CityListTab({
   places: Place[]
   customCategories: CustomCategory[]
 }) {
-  const allCategories: Category[] = [
-    ...CATEGORIES,
-    ...customCategories.map((c) => categoryById(c.id, customCategories)),
-  ]
+  const allCategories: Category[] = allCategoriesSorted(customCategories)
 
   return (
     <div className="h-full overflow-y-auto px-3 pt-28 pb-6">

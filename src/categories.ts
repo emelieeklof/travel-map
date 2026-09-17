@@ -9,8 +9,12 @@ import {
   Mountain,
   MapPin,
   Waves,
+  IceCreamCone,
+  Palette,
+  Landmark,
   type LucideIcon,
 } from 'lucide-react'
+import { SurfingIcon } from './components/SurfingIcon'
 import type { CustomCategory } from './types'
 import { CUSTOM_CATEGORY_ICONS } from './customCategoryIcons'
 
@@ -25,6 +29,10 @@ export type CategoryId =
   | 'restaurant'
   | 'cafe'
   | 'surfing'
+  | 'surf'
+  | 'gelato'
+  | 'art'
+  | 'museum'
 
 export type Category = {
   id: CategoryId
@@ -44,7 +52,11 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: Shirt },
   { id: 'restaurant', label: 'Restaurant', color: '#8e5c4c', icon: UtensilsCrossed },
   { id: 'cafe', label: 'Cafe', color: '#b8863f', icon: Coffee },
-  { id: 'surfing', label: 'Surfing', color: '#3e8e8e', icon: Waves },
+  { id: 'surfing', label: 'Swimming', color: '#3e8e8e', icon: Waves },
+  { id: 'surf', label: 'Surfing', color: '#2e7d8e', icon: SurfingIcon as unknown as LucideIcon },
+  { id: 'gelato', label: 'Gelato', color: '#c98a4b', icon: IceCreamCone },
+  { id: 'art', label: 'Art', color: '#9e5c8e', icon: Palette },
+  { id: 'museum', label: 'Museum', color: '#6b5c3e', icon: Landmark },
 ]
 
 export const CATEGORY_BY_ID: Record<CategoryId, Category> = Object.fromEntries(
@@ -76,6 +88,17 @@ export function categoryById(id: string, customCategories: readonly CustomCatego
   return CATEGORY_BY_ID.other
 }
 
+/**
+ * All categories (built-in + this user's custom ones) in the order they should be
+ * listed anywhere a full list is shown: alphabetical by label, with "Other" always last.
+ */
+export function allCategoriesSorted(customCategories: readonly CustomCategory[]): Category[] {
+  const custom = customCategories.map((c) => categoryById(c.id, customCategories))
+  const rest = [...CATEGORIES.filter((c) => c.id !== 'other'), ...custom]
+  rest.sort((a, b) => a.label.localeCompare(b.label))
+  return [...rest, CATEGORY_BY_ID.other]
+}
+
 /** SVG path (24x24 viewBox) used for legacy/focus-mode raster markers — no per-icon
  * path data exists for custom categories, so they fall back to the generic "Other" pin. */
 export function categorySvgPath(id: string): string {
@@ -102,4 +125,12 @@ export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
     '<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/>',
   surfing:
     '<path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.6 2 5.1 2 2.6 0 2.6-2 5.1-2 1.3 0 1.9.5 2.5 1"/>',
+  surf:
+    '<path d="M13 3c1.6 2.3 2.2 7 1.6 12-.3 2.3-.8 4-1.1 5.2l-.5-.7-.5.7c-.3-1.2-.8-2.9-1.1-5.2-.6-5 0-9.7 1.6-12Z"/><path d="M2 20.5c2.2-1.3 4.4-1.3 6.6 0s4.4 1.3 6.6 0 4.4-1.3 6.6 0"/>',
+  gelato:
+    '<path d="M8.5 11 12 21l3.5-10Z"/><circle cx="12" cy="8" r="4"/>',
+  art:
+    '<path d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8Z"/><circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/>',
+  museum:
+    '<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="m3 11 9-7 9 7Z"/>',
 }
