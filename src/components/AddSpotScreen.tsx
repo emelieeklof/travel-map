@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react'
 import { MapView } from './MapView'
 import { PlaceSearch, type PickedPlace } from './PlaceSearch'
 import { AddPlaceDialog } from './AddPlaceDialog'
+import { PinsCreatedToast } from './PinsCreatedToast'
 import { actions } from '../store'
 import type { Viewport } from './mapViewport'
 
@@ -10,6 +11,7 @@ export function AddSpotScreen({ onClose }: { onClose: () => void }) {
   const [picked, setPicked] = useState<PickedPlace | null>(null)
   const [locating, setLocating] = useState(true)
   const [initialViewport, setInitialViewport] = useState<Viewport | null>(null)
+  const [toastCount, setToastCount] = useState<number | null>(null)
 
   useEffect(() => {
     if (!('geolocation' in navigator)) {
@@ -55,7 +57,10 @@ export function AddSpotScreen({ onClose }: { onClose: () => void }) {
       </div>
       <AddPlaceDialog
         picked={picked}
-        onCancel={() => setPicked(null)}
+        onCancel={() => {
+          setPicked(null)
+          onClose()
+        }}
         onSave={(input) => {
           actions.addPlace({
             collectionId: input.collectionId,
@@ -74,10 +79,19 @@ export function AddSpotScreen({ onClose }: { onClose: () => void }) {
             businessStatus: input.businessStatus,
             notes: input.notes,
           })
+        }}
+        onDone={(createdCount) => {
           setPicked(null)
-          onClose()
+          if (createdCount >= 2) {
+            setToastCount(createdCount)
+          } else {
+            onClose()
+          }
         }}
       />
+      {toastCount !== null && (
+        <PinsCreatedToast count={toastCount} onDone={onClose} />
+      )}
     </div>
   )
 }

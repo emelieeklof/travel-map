@@ -37,24 +37,28 @@ describe('AddPlaceDialog', () => {
   // inline, returning a new array every render and triggering an infinite update
   // loop (React "Maximum update depth exceeded") that blanked the whole Add screen.
   it('renders without an infinite render loop when a collection list is present', () => {
-    expect(() => render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={vi.fn()} />)).not.toThrow()
+    expect(() =>
+      render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={vi.fn()} onDone={vi.fn()} />),
+    ).not.toThrow()
     expect(screen.getByText('Existing collection')).toBeInTheDocument()
   })
 
-  it('saves into an existing picked collection', async () => {
+  it('saves into an existing picked collection and finishes without a "create another" streak', async () => {
     const onSave = vi.fn()
-    render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} />)
+    const onDone = vi.fn()
+    render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} onDone={onDone} />)
 
     await userEvent.click(screen.getByText('Existing collection'))
     await userEvent.click(screen.getByRole('button', { name: 'Save spot' }))
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ collectionId: 'col-1', name: 'Cafe Du Jour' }))
     expect(createCollection).not.toHaveBeenCalled()
+    expect(onDone).toHaveBeenCalledWith(1)
   })
 
   it('creates a new collection and saves into it', async () => {
     const onSave = vi.fn()
-    render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} />)
+    render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} onDone={vi.fn()} />)
 
     await userEvent.click(screen.getByText('+ New city…'))
     await userEvent.type(screen.getByPlaceholderText('New city name…'), 'Athens trip')
@@ -68,12 +72,29 @@ describe('AddPlaceDialog', () => {
     const original = state.collections
     state.collections = []
     try {
-      render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={vi.fn()} />)
+      render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={vi.fn()} onDone={vi.fn()} />)
       // With zero existing collections the dialog defaults straight into "creating
       // new" with an empty name, so Save starts disabled.
       expect(screen.getByRole('button', { name: 'Save spot' })).toBeDisabled()
     } finally {
       state.collections = original
     }
+  })
+
+  it('keeps the dialog open and carries over the city when "Create another" is checked', async () => {
+    const onSave = vi.fn()
+    const onDone = vi.fn()
+    render(<AddPlaceDialog picked={picked} onCancel={vi.fn()} onSave={onSave} onDone={onDone} />)
+
+    await userEvent.click(screen.getByText('Existing collection'))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Create another' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save spot' }))
+
+    // Dialog stays open (still rendering the City field) and hasn't reported done yet.
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onDone).not.toHaveBeenCalled()
+    expect(screen.getByText('Existing collection')).toBeInTheDocument()
+    // Save is disabled again until the next place is searched/picked.
+    expect(screen.getByRole('button', { name: 'Save spot' })).toBeDisabled()
   })
 })
