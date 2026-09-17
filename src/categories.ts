@@ -2,7 +2,6 @@ import {
   Utensils,
   UtensilsCrossed,
   Coffee,
-  Shirt,
   Camera,
   ShoppingBag,
   Wine,
@@ -16,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { SurfingIcon } from './components/SurfingIcon'
+import { ThriftingIcon } from './components/ThriftingIcon'
 import type { CustomCategory } from './types'
 import { CUSTOM_CATEGORY_ICONS } from './customCategoryIcons'
 
@@ -51,7 +51,7 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'bars', label: 'Bars', color: '#c25136', icon: Wine },
   { id: 'activities', label: 'Activities', color: '#466556', icon: Mountain },
   { id: 'other', label: 'Other', color: '#57423d', icon: MapPin },
-  { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: Shirt },
+  { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: ThriftingIcon as unknown as LucideIcon },
   { id: 'restaurant', label: 'Restaurant', color: '#8e5c4c', icon: UtensilsCrossed },
   { id: 'cafe', label: 'Cafe', color: '#b8863f', icon: Coffee },
   { id: 'surfing', label: 'Swimming', color: '#3e8e8e', icon: Waves },
