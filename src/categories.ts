@@ -12,10 +12,10 @@ import {
   Palette,
   Landmark,
   Ham,
+  Recycle,
   type LucideIcon,
 } from 'lucide-react'
 import { SurfingIcon } from './components/SurfingIcon'
-import { ThriftingIcon } from './components/ThriftingIcon'
 import type { CustomCategory } from './types'
 import { CUSTOM_CATEGORY_ICONS } from './customCategoryIcons'
 
@@ -51,7 +51,7 @@ export const CATEGORIES: readonly Category[] = [
   { id: 'bars', label: 'Bars', color: '#c25136', icon: Wine },
   { id: 'activities', label: 'Activities', color: '#466556', icon: Mountain },
   { id: 'other', label: 'Other', color: '#57423d', icon: MapPin },
-  { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: ThriftingIcon as unknown as LucideIcon },
+  { id: 'thrifting', label: 'Thrifting', color: '#7a5c8e', icon: Recycle },
   { id: 'restaurant', label: 'Restaurant', color: '#8e5c4c', icon: UtensilsCrossed },
   { id: 'cafe', label: 'Cafe', color: '#b8863f', icon: Coffee },
   { id: 'surfing', label: 'Swimming', color: '#3e8e8e', icon: Waves },
@@ -121,7 +121,7 @@ export const CATEGORY_SVG_PATHS: Record<CategoryId, string> = {
   other:
     '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
   thrifting:
-    '<path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>',
+    '<path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5"/><path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12"/><path d="m14 16-3 3 3 3"/><path d="M8.293 13.596 7.196 9.5 3.1 10.598"/><path d="m9.344 5.811 1.093-1.892A1.83 1.83 0 0 1 11.985 3a1.784 1.784 0 0 1 1.546.888l3.943 6.843"/><path d="m13.378 9.633 4.096 1.098 1.097-4.096"/>',
   restaurant:
     '<path d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8"/><path d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6L8 14"/><path d="m4 12.4 6.1 6.1"/><path d="M7 22 11 18"/><path d="m17 15 1.4 1.4"/><path d="m21 21-2.4-2.4"/>',
   cafe:
