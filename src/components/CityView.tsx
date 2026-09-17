@@ -134,7 +134,7 @@ export function CityView({ collectionId }: { collectionId: string }) {
         )}
       </div>
 
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         {tab === 'map' ? (
           <>
             <MapView
