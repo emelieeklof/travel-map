@@ -4,7 +4,7 @@ import { useAppState, actions, signOut } from '../store'
 import { FollowButton } from './FollowButton'
 import { CollectionCard } from './CollectionCard'
 import { PinTile } from './PinTile'
-import { CATEGORIES, categoryById } from '../categories'
+import { allCategoriesSorted } from '../categories'
 
 export function Profile({ creatorId }: { creatorId?: string }) {
   const myUserId = useAppState((s) => s.userId)
@@ -93,7 +93,7 @@ export function Profile({ creatorId }: { creatorId?: string }) {
         </div>
       ) : (
         <div className="px-4 pt-4">
-          {[...CATEGORIES, ...customCategories.map((c) => categoryById(c.id, customCategories))].map((cat) => {
+          {allCategoriesSorted(customCategories).map((cat) => {
             const items = myPins.filter((p) => p.category === cat.id)
             if (items.length === 0) return null
             return (

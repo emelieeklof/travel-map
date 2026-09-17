@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { X, Check, Plus, Search, Loader2 } from 'lucide-react'
-import { CATEGORIES, type CategoryId } from '../categories'
-import { CUSTOM_CATEGORY_ICONS } from '../customCategoryIcons'
+import { allCategoriesSorted, type CategoryId } from '../categories'
 import type { PickedPlace } from './PlaceSearch'
 import { AUTOCOMPLETE_FIELDS, placeResultToPicked } from '../lib/placeAutocomplete'
 import { actions, useAppState } from '../store'
@@ -167,32 +166,8 @@ export function AddPlaceDialog({ picked, onCancel, onSave, onDone }: Props) {
 
           <Field label="Category">
             <div className="flex flex-wrap gap-1.5">
-              {CATEGORIES.map((c) => {
+              {allCategoriesSorted(customCategories).map((c) => {
                 const Icon = c.icon
-                const active = c.id === category
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => {
-                      setCreatingNewCategory(false)
-                      setCategory(c.id)
-                    }}
-                    className={
-                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-all ' +
-                      (active
-                        ? 'border-transparent text-white shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:border-outline')
-                    }
-                    style={active ? { backgroundColor: c.color } : undefined}
-                  >
-                    <Icon className="h-3 w-3" strokeWidth={2.5} />
-                    {c.label}
-                  </button>
-                )
-              })}
-              {customCategories.map((c) => {
-                const Icon = CUSTOM_CATEGORY_ICONS[c.icon] ?? CUSTOM_CATEGORY_ICONS.tag
                 const active = c.id === category
                 return (
                   <button
